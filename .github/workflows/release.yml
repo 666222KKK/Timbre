@@ -10,6 +10,10 @@ on:
         description: '版本号 versionCode（整数，可留空：留空则自动取上次发布 +1）'
         required: false
         default: ''
+      releaseNotes:
+        description: '自定义更新内容（可留空：留空则自动生成 release notes）'
+        required: false
+        default: ''
 
 concurrency:
   group: release
@@ -79,14 +83,25 @@ jobs:
       - name: 创建 GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_NOTES: ${{ inputs.releaseNotes }}
         run: |
           cp app/build/outputs/apk/free/release/app-free-release.apk \
             "timbre-v${{ inputs.versionName }}.apk"
-          gh release create "v${{ inputs.versionName }}" \
-            "timbre-v${{ inputs.versionName }}.apk" \
-            --title "Timbre v${{ inputs.versionName }}" \
-            --generate-notes \
-            --target "$GITHUB_SHA"
+          if [ -n "$INPUT_NOTES" ]; then
+            NOTES_FILE=$(mktemp)
+            printf '%s' "$INPUT_NOTES" > "$NOTES_FILE"
+            gh release create "v${{ inputs.versionName }}" \
+              "timbre-v${{ inputs.versionName }}.apk" \
+              --title "Timbre v${{ inputs.versionName }}" \
+              --notes-file "$NOTES_FILE" \
+              --target "$GITHUB_SHA"
+          else
+            gh release create "v${{ inputs.versionName }}" \
+              "timbre-v${{ inputs.versionName }}.apk" \
+              --title "Timbre v${{ inputs.versionName }}" \
+              --generate-notes \
+              --target "$GITHUB_SHA"
+          fi
 
       - name: 更新 update.json 供应用内检查更新
         env:
