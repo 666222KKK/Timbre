@@ -1,6 +1,6 @@
 {
   "versionName": "3.6.1",
-  "versionCode": 630,
+  "versionCode": 631,
   "releaseUrl": "https://github.com/cq10086123/Timbre/releases/latest",
-  "releaseNotes": "<!-- Release notes generated using configuration in .github/release.yml at 85e732b584e44977f6db986de8ef1b0c7b6e262e -->\n\n## What's Changed\n### 🧱 Other Changes\n* fix: 章节时长探测改为真播放后限速执行，避免吃掉限流源接口配额 by @cq10086123 in https://github.com/cq10086123/Timbre/pull/101\n\n\n**Full Changelog**: https://github.com/cq10086123/Timbre/compare/v3.5.652...v3.6.1"
+  "releaseNotes": "新增：在线听书播放预加载，提前缓存后续章节，切换章节更流畅\n- 进入播放器不再发送任何额外网络请求，开始播放后才按设置预载\n- 预载规则：播放超过触发秒数（默认30秒）才开始，最多预载2章，章节间隔50秒，可在播放器设置中调整\n- 短章节、暂停、切书时自动停止预载，不浪费流量\n- 设置页新增独立的「播放器设置」板块，在线预载相关选项全部移入其中\n- 修复预加载线程问题，提升限流接口源下的播放稳定性"
 }
