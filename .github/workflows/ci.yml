@@ -50,9 +50,12 @@ jobs:
       # completion, so with parallel workers a hang leaves several candidates.
       # Serialised the last started task is the one that never returned.
       - name: Tests + Build
-        # a normal unit run takes ~4 minutes; 8 minutes is plenty and a hang
-        # costs the half of what the job level 30 minute timeout would
-        timeout-minutes: 8
+        # a warm run takes ~1.5 minutes; a cold cache (a change that
+        # invalidates most modules, e.g. anything in core:data) recompiles and
+        # reruns everything and needs ~8 minutes. This bound only covers a slow
+        # runner - a hanging test fails by itself, see the timeout in
+        # ChapterParserTest.
+        timeout-minutes: 15
         run: ./gradlew voiceUnitTest --max-workers=1
       - name: Publish JUnit Report
         uses: mikepenz/action-junit-report@v6
