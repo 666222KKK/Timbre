@@ -8,6 +8,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import voice.core.extension.engine.SearchItem
 import voice.core.extension.engine.SourceContract
 import voice.core.online.ExtensionOnlineSource
+import voice.core.online.OnlineDiscoveryCategory
+import voice.core.online.OnlineDiscoveryPage
 import voice.core.online.OnlineChapter
 import voice.core.online.OnlineSearchResult
 import voice.core.online.OnlineSourceInfo
@@ -71,9 +73,13 @@ public class ExtensionSourceBackend(
     source: String,
     keyword: String,
   ): List<OnlineSearchResult> {
+    return searchPage(source, keyword, 1)
+  }
+
+  private suspend fun searchPage(source: String, keyword: String, page: Int): List<OnlineSearchResult> {
     val sourceId = sourceId(source)
     val params = params(
-      base = linkedMapOf("keyword" to keyword, "page" to 1, "limit" to 30),
+      base = linkedMapOf("keyword" to keyword, "page" to page, "limit" to 30),
     )
     val json = engineProvider.useEngine(sourceId) {
       // no stage-level cap: sources control timing themselves via per-request
@@ -81,7 +87,11 @@ public class ExtensionSourceBackend(
       // read 30s unless the script overrides)
       it.invoke("search", params)
     }
-    val items = SourceContract.parseSearchResults(json)
+    return mapResults(source, SourceContract.parseSearchResults(json))
+  }
+
+  private fun mapResults(source: String, items: List<SearchItem>): List<OnlineSearchResult> {
+    val sourceId = sourceId(source)
     items.forEach { item ->
       searchExtras.put("$sourceId/${item.id}", item.extra)
     }
@@ -96,6 +106,31 @@ public class ExtensionSourceBackend(
         trackCount = item.trackCount,
       )
     }
+  }
+
+  override suspend fun discoveryCategories(source: String): List<OnlineDiscoveryCategory>? {
+    val json = engineProvider.useEngine(sourceId(source)) {
+      it.invoke("discoverCategories", "{}")
+    }
+    return SourceContract.parseDiscoveryCategories(json)?.map { OnlineDiscoveryCategory(it.id, it.title) }
+  }
+
+  override suspend fun discover(
+    source: String,
+    category: OnlineDiscoveryCategory,
+    page: Int,
+  ): OnlineDiscoveryPage {
+    require(page >= 1)
+    val keyword = category.keyword
+    if (keyword != null) {
+      val books = searchPage(source, keyword, page)
+      return OnlineDiscoveryPage(books, hasMore = books.size >= 30)
+    }
+    val json = engineProvider.useEngine(sourceId(source)) {
+      it.invoke("discover", params(linkedMapOf("categoryId" to category.id, "page" to page, "limit" to 30)))
+    }
+    val result = SourceContract.parseDiscoveryPage(json)
+    return OnlineDiscoveryPage(mapResults(source, result.books), result.hasMore)
   }
 
   override suspend fun chapters(

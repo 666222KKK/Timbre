@@ -17,6 +17,10 @@ public data class SearchItem(
   public val extra: JsonObject,
 )
 
+public data class DiscoveryCategoryItem(public val id: String, public val title: String)
+
+public data class DiscoveryPageItem(public val books: List<SearchItem>, public val hasMore: Boolean)
+
 /** One chapter returned by a source script (standard fields + extras). */
 public data class ChapterItem(
   public val id: String,
@@ -66,6 +70,30 @@ public object SourceContract {
         extra = item,
       )
     }
+  }
+
+  public fun parseDiscoveryCategories(value: String): List<DiscoveryCategoryItem>? {
+    if (value.trim() == "null") return null
+    return parseItems(value, "discoverCategories") { item, index ->
+      DiscoveryCategoryItem(item.stringField(listOf("id"), index), item.stringField(listOf("title"), index))
+    }.distinctBy { it.id }
+  }
+
+  public fun parseDiscoveryPage(value: String): DiscoveryPageItem {
+    val element = try {
+      json.parseToJsonElement(value)
+    } catch (e: Exception) {
+      throw SourceContractException("discover 返回的不是合法 JSON", e)
+    }
+    if (element !is JsonObject || element["books"] !is JsonArray) {
+      throw SourceContractException("discover 必须返回 { books: [], hasMore: boolean }")
+    }
+    val hasMore = when (element["hasMore"]) {
+      JsonPrimitive(true) -> true
+      JsonPrimitive(false), null -> false
+      else -> throw SourceContractException("discover.hasMore 必须是布尔值")
+    }
+    return DiscoveryPageItem(parseSearchResults(element.getValue("books").toString()), hasMore)
   }
 
   public fun parseChapters(json: String): List<ChapterItem> {

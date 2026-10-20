@@ -114,6 +114,22 @@ public class OnlineSourceService internal constructor(
     }
   }
 
+  public suspend fun discoveryCategories(source: String): List<OnlineDiscoveryCategory> {
+    return extensionBackendFor(source)?.discoveryCategories(source) ?: OnlineDiscovery.searchCategories
+  }
+
+  public suspend fun discover(
+    source: String,
+    category: OnlineDiscoveryCategory,
+    page: Int,
+  ): OnlineDiscoveryPage {
+    require(page >= 1)
+    val backend = extensionBackendFor(source)
+    if (backend != null) return backend.discover(source, category, page)
+    if (page > 1) return OnlineDiscoveryPage(emptyList())
+    return OnlineDiscoveryPage(search(source, requireNotNull(category.keyword)))
+  }
+
   public suspend fun chapters(
     source: String,
     bookId: String,

@@ -213,7 +213,7 @@ internal fun OnlineSearchSection(
 }
 
 @Composable
-private fun OnlineResultRow(
+internal fun OnlineResultRow(
   result: OnlineSearchResult,
   onClick: () -> Unit,
 ) {
@@ -257,7 +257,7 @@ private data class ChaptersUiState(
 )
 
 @Composable
-private fun OnlineChaptersDialog(
+internal fun OnlineChaptersDialog(
   service: OnlineSourceService,
   catalog: OnlinePlaybackCatalog,
   book: OnlineSearchResult,

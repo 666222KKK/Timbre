@@ -9,6 +9,11 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.res.stringResource
+import voice.features.bookOverview.discovery.DiscoveryGraph
+import voice.core.strings.R as StringsR
 import androidx.compose.material3.SheetValue.Expanded
 import androidx.compose.material3.SheetValue.Hidden
 import androidx.compose.material3.TopAppBarDefaults
@@ -102,6 +107,7 @@ fun BookOverviewScreen(modifier: Modifier = Modifier) {
   BookOverview(
     viewState = viewState,
     onSettingsClick = bookOverviewViewModel::onSettingsClick,
+    onDiscoveryClick = { rootGraphAs<DiscoveryGraph>().navigator.goTo(Destination.Discovery) },
     onBookClick = bookOverviewViewModel::onBookClick,
     onBookLongClick = { bookId ->
       bottomSheetViewModel.bookSelected(bookId)
@@ -228,6 +234,7 @@ internal fun BookOverview(
   onClearSearchHistory: () -> Unit,
   onPermissionBugCardClick: () -> Unit,
   modifier: Modifier = Modifier,
+  onDiscoveryClick: () -> Unit = {},
 ) {
   val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
   Scaffold(
@@ -242,6 +249,16 @@ internal fun BookOverview(
         onSearchBookClick = onSearchBookClick,
         onClearSearchHistory = onClearSearchHistory,
       )
+    },
+    bottomBar = {
+      if (!viewState.searchActive) {
+        TextButton(
+          onClick = onDiscoveryClick,
+          modifier = Modifier.navigationBarsPadding(),
+        ) {
+          Text(stringResource(StringsR.string.discovery_browse))
+        }
+      }
     },
     floatingActionButton = {
       if (viewState.playButtonState != null) {

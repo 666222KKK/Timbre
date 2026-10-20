@@ -28,6 +28,33 @@ class JsSourceEngineTest {
   private fun http(): SandboxHttp = OkHttpSandboxHttp(okhttp3.OkHttpClient())
 
   @Test
+  fun optionalDiscoveryStagesRemainCompatible() = runTest {
+    val legacy = JsSourceEngine.create("demo", "registerSource({id:'demo', search: async () => []})", "demo.js", http())
+    try {
+      assertEquals("null", legacy.invoke("discoverCategories", "{}"))
+      assertEquals("[]", legacy.invoke("search", "{}"))
+    } finally {
+      legacy.close()
+    }
+    val engine = JsSourceEngine.create(
+      "demo",
+      """registerSource({id:'demo',
+        discoverCategories: async () => [{id:'hot', title:'热榜'}],
+        discover: async p => ({books:[{id:String(p.page),bookTitle:p.categoryId}],hasMore:p.page < 2})
+      })""",
+      "demo.js", http(),
+    )
+    try {
+      assertEquals("hot", SourceContract.parseDiscoveryCategories(engine.invoke("discoverCategories", "{}"))!!.single().id)
+      val result = SourceContract.parseDiscoveryPage(engine.invoke("discover", """{"categoryId":"hot","page":2}"""))
+      assertEquals("2", result.books.single().id)
+      assertEquals(false, result.hasMore)
+    } finally {
+      engine.close()
+    }
+  }
+
+  @Test
   fun fullSearchChaptersAudioFlow() = runTest {
     val host = server.url("/").toString().removeSuffix("/")
     val script = """

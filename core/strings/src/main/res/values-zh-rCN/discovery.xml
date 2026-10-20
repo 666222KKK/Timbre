@@ -1,0 +1,11 @@
+<resources>
+  <string name="discovery_title">发现</string>
+  <string name="discovery_browse">发现好书</string>
+  <string name="discovery_manage_sources">书源管理</string>
+  <string name="discovery_refresh">刷新</string>
+  <string name="discovery_no_sources">暂无已启用的书源，请先导入并启用书源，再返回发现。</string>
+  <string name="discovery_no_categories">此书源暂无发现分类。</string>
+  <string name="discovery_keyword_hint">当前书源使用分类关键词搜索，结果并非排行榜。</string>
+  <string name="discovery_load_more">加载更多</string>
+  <string name="discovery_end">已加载全部可用结果</string>
+</resources>

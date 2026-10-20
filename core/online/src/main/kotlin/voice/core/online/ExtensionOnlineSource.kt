@@ -23,6 +23,14 @@ public interface ExtensionOnlineSource {
     keyword: String,
   ): List<OnlineSearchResult>
 
+  public suspend fun discoveryCategories(source: String): List<OnlineDiscoveryCategory>? = null
+
+  public suspend fun discover(
+    source: String,
+    category: OnlineDiscoveryCategory,
+    page: Int,
+  ): OnlineDiscoveryPage = OnlineDiscoveryPage(search(source, requireNotNull(category.keyword)))
+
   public suspend fun chapters(
     source: String,
     bookId: String,

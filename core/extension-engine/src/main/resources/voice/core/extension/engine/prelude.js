@@ -197,6 +197,7 @@
   globalThis.__invoke = async (stage, paramsJson) => {
     if (!registered) throw new Error('源脚本未调用 registerSource');
     const fn = registered[stage];
+    if (stage === 'discoverCategories' && typeof fn !== 'function') return 'null';
     if (typeof fn !== 'function') throw new Error('该源未实现 ' + stage + '()');
     const params = paramsJson ? JSON.parse(paramsJson) : {};
     const result = await fn.call(registered, params);
