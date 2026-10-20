@@ -31,7 +31,7 @@ class BackupService(
 ) {
   private val mutex = Mutex()
 
-  suspend fun create(password: CharArray): ByteArray = mutex.withLock {
+  suspend fun create(): ByteArray = mutex.withLock {
     withContext(Dispatchers.IO) {
       val files = linkedMapOf<String, ByteArray>()
       var total = 0L
@@ -70,14 +70,13 @@ class BackupService(
           BackupManifest(createdAt = System.currentTimeMillis(), filesPath = application.filesDir.path, databaseVersion = version),
           files,
         ),
-        password,
       )
     }
   }
 
   suspend fun inspect(
     bytes: ByteArray,
-    password: CharArray,
+    password: CharArray = charArrayOf(),
   ): BackupContents = withContext(Dispatchers.IO) {
     BackupArchive.decode(bytes, password).also {
       require(it.manifest.databaseVersion == database.openHelper.writableDatabase.version) { "备份数据库版本与当前应用不兼容" }

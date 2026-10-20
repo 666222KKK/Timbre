@@ -27,6 +27,8 @@ data class BackupContents(
   val files: Map<String, ByteArray>,
 )
 
+class LegacyBackupPasswordRequired : IllegalArgumentException("这是旧版加密备份，请输入原备份密码")
+
 object BackupArchive {
   const val MAX_BYTES = 64 * 1024 * 1024
   private const val MAX_EXPANDED = 256 * 1024 * 1024
@@ -49,9 +51,9 @@ object BackupArchive {
 
   fun encode(
     contents: BackupContents,
-    password: CharArray,
+    password: CharArray = charArrayOf(),
   ): ByteArray {
-    require(password.size >= 8) { "备份密码至少需要 8 个字符" }
+    require(password.isEmpty() || password.size >= 8) { "备份密码至少需要 8 个字符" }
     require(contents.files.keys.all(::allowed) && "manifest.json" !in contents.files)
     val buffer = ByteArrayOutputStream()
     ZipOutputStream(buffer).use { zip ->
@@ -60,6 +62,11 @@ object BackupArchive {
         zip.putNextEntry(ZipEntry(name))
         zip.write(bytes)
         zip.closeEntry()
+      }
+    }
+    if (password.isEmpty()) {
+      return buffer.toByteArray().also {
+        require(it.size <= MAX_BYTES) { "备份超过 64 MB 上限" }
       }
     }
     val salt = ByteArray(16).also(SecureRandom()::nextBytes)
@@ -74,16 +81,24 @@ object BackupArchive {
 
   fun decode(
     bytes: ByteArray,
-    password: CharArray,
+    password: CharArray = charArrayOf(),
   ): BackupContents {
-    require(bytes.size in 52..MAX_BYTES && bytes.copyOfRange(0, 8).contentEquals(magic)) { "不是有效的 Timbre 备份" }
-    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-    cipher.init(Cipher.DECRYPT_MODE, key(password, bytes.copyOfRange(8, 24)), GCMParameterSpec(128, bytes, 24, 12))
-    cipher.updateAAD(bytes.copyOfRange(0, 36))
-    val plaintext = try {
-      cipher.doFinal(bytes, 36, bytes.size - 36)
-    } catch (e: Exception) {
-      throw IllegalArgumentException("密码不正确或备份文件损坏", e)
+    require(bytes.size in 4..MAX_BYTES) { "不是有效的 Timbre 备份" }
+    val encrypted = bytes.size >= 8 && bytes.copyOfRange(0, 8).contentEquals(magic)
+    val plaintext = if (encrypted) {
+      if (password.isEmpty()) throw LegacyBackupPasswordRequired()
+      require(bytes.size >= 52) { "备份文件损坏" }
+      val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+      cipher.init(Cipher.DECRYPT_MODE, key(password, bytes.copyOfRange(8, 24)), GCMParameterSpec(128, bytes, 24, 12))
+      cipher.updateAAD(bytes.copyOfRange(0, 36))
+      try {
+        cipher.doFinal(bytes, 36, bytes.size - 36)
+      } catch (e: Exception) {
+        throw IllegalArgumentException("密码不正确或备份文件损坏", e)
+      }
+    } else {
+      require(bytes.take(4) == listOf<Byte>(0x50, 0x4b, 0x03, 0x04)) { "不是有效的 Timbre 备份" }
+      bytes
     }
     val files = linkedMapOf<String, ByteArray>()
     var total = 0

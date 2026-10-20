@@ -15,6 +15,24 @@ class BackupArchiveTest {
   )
 
   @Test
+  fun newBackupsRestoreWithoutAnyPassword() {
+    val original = contents()
+    val archive = BackupArchive.encode(original)
+    assertEquals("PK", archive.copyOfRange(0, 2).decodeToString())
+    val restored = BackupArchive.decode(archive)
+    assertEquals(original.manifest, restored.manifest)
+    original.files.forEach { (path, bytes) -> assertContentEquals(bytes, restored.files.getValue(path)) }
+  }
+
+  @Test
+  fun onlyLegacyEncryptedFilesRequestTheOriginalPassword() {
+    val legacy = BackupArchive.encode(contents(), password)
+    assertFailsWith<LegacyBackupPasswordRequired> { BackupArchive.decode(legacy) }
+    assertEquals(contents().manifest, BackupArchive.decode(legacy, password).manifest)
+    assertFailsWith<IllegalArgumentException> { BackupArchive.decode("not a backup".toByteArray()) }
+  }
+
+  @Test
   fun encryptedRoundTripPreservesMetadataAndFiles() {
     val original = contents()
     val result = BackupArchive.decode(BackupArchive.encode(original, password), password)
