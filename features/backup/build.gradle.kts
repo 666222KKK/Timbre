@@ -15,4 +15,5 @@ dependencies {
   implementation(libs.navigation3.ui)
   implementation(libs.datastore)
   implementation(libs.androidxCore)
+  implementation(libs.okhttp)
 }

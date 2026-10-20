@@ -45,6 +45,21 @@ object PendingBackupRestore {
       val passwords = contents.files["webdav-secrets.json"]?.let {
         Json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), it.decodeToString())
       }.orEmpty()
+      val connectionFile = File(temp, "files/datastore/backupWebDavConnection")
+      if (connectionFile.exists()) {
+        val connection = Json.decodeFromString<BackupConnection>(connectionFile.readText())
+        val password = requireNotNull(contents.files["backup-webdav-secret.json"]) { "备份缺少备份服务器凭据" }
+        connectionFile.writeText(
+          Json.encodeToString(
+            connection.copy(
+              server = connection.server.copy(
+                encryptedPassword = secrets.encrypt(Json.decodeFromString<String>(password.decodeToString())),
+              ),
+            ),
+          ),
+        )
+      }
+      File(temp, "backup-webdav-secret.json").delete()
       val serverFile = File(temp, "files/datastore/webDavServers")
       if (serverFile.exists()) {
         val servers = Json.parseToJsonElement(serverFile.readText()).jsonArray.map { element ->

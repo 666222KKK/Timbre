@@ -135,7 +135,7 @@ private fun Settings(
             Text(stringResource(StringsR.string.webdav_settings_summary))
           },
         ) {
-          Text(stringResource(StringsR.string.webdav_title))
+          Text("WebDAV 音频播放")
         }
       }
       item {

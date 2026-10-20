@@ -11,6 +11,7 @@ import voice.core.webdav.WebDavClient
 import voice.core.webdav.WebDavResource
 import voice.core.webdav.WebDavServer
 import java.io.ByteArrayOutputStream
+import java.util.UUID
 
 @Inject
 class BackupWebDav(private val client: WebDavClient) {
@@ -19,8 +20,11 @@ class BackupWebDav(private val client: WebDavClient) {
     password: String,
     directory: String,
   ): List<WebDavResource> {
+    client.invalidateListingsForServer(server.id)
     return client.list(server, password, directoryUrl(server, directory).toString())
-      .filter { !it.isDirectory && it.url.toHttpUrl().pathSegments.last().endsWith(".tbk") }
+      .filter {
+        !it.isDirectory && !it.name.startsWith("timbre-connection-test-") && it.url.toHttpUrl().pathSegments.last().endsWith(".tbk")
+      }
       .sortedByDescending { it.url }
   }
 
@@ -52,7 +56,46 @@ class BackupWebDav(private val client: WebDavClient) {
       ) { response ->
         require(response.isSuccessful) { "上传备份失败：HTTP ${response.code}" }
       }
+      require(
+        download(
+          server,
+          password,
+          directory,
+          directoryUrl(server, directory).newBuilder().addPathSegment(name).build().toString(),
+        ).contentEquals(bytes),
+      ) {
+        "云端备份内容校验失败，请重试"
+      }
       client.invalidateListingsForServer(server.id)
+    }
+  }
+
+  suspend fun testConnection(
+    server: WebDavServer,
+    password: String,
+    directory: String,
+  ) {
+    val name = "timbre-connection-test-${UUID.randomUUID()}.tbk"
+    val bytes = UUID.randomUUID().toString().toByteArray()
+    var failure: Throwable? = null
+    try {
+      upload(server, password, directory, name, bytes)
+    } catch (e: Throwable) {
+      failure = e
+      throw e
+    } finally {
+      try {
+        withContext(Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
+          val url = directoryUrl(server, directory).newBuilder().addPathSegment(name).build()
+          execute(server, password, Request.Builder().url(url).delete()) { response ->
+            require(response.isSuccessful || response.code == 404) { "测试文件清理失败：HTTP ${response.code}，请检查删除权限" }
+          }
+          client.invalidateListingsForServer(server.id)
+        }
+      } catch (cleanup: Exception) {
+        if (failure == null) throw cleanup
+        failure.addSuppressed(cleanup)
+      }
     }
   }
 
