@@ -3,8 +3,6 @@ name: Discovery tests and APK
 on:
   push:
     branches: [ feature/discovery ]
-  pull_request:
-    branches: [ main ]
 
 permissions:
   contents: read
@@ -27,7 +25,7 @@ jobs:
       - name: Android lint
         run: ./gradlew :app:lintFreeDebug
       - name: Build installable discovery test APK
-        run: ./gradlew :app:assembleFreeDebug -Pvoice.applicationId=app.timbre.audiobook.discovery -Pvoice.versionName=3.6.1-discovery -Pvoice.versionCode=1
+        run: ./gradlew :app:assembleFreeDebug -Pvoice.applicationId=app.timbre.audiobook.discovery -Pvoice.versionName=3.6.1.1 -Pvoice.versionCode=1
       - name: Collect APK and checksum
         run: |
           mkdir -p package

@@ -4,9 +4,9 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import voice.core.extension.engine.JsSourceEngine
-import voice.core.online.OnlineSourceInfo
-import voice.core.online.OnlineDiscoveryCategory
 import voice.core.online.OnlineDiscovery
+import voice.core.online.OnlineDiscoveryCategory
+import voice.core.online.OnlineSourceInfo
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -55,11 +55,13 @@ class ExtensionSourceBackendTest {
 
   @Test
   fun discoveryPreservesBookExtrasAndPageParameters() = runTest {
-    val recorded = RecordedEngine(mapOf(
-      "discoverCategories" to """[{"id":"hot","title":"热榜"}]""",
-      "discover" to """{"books":[{"id":"7","bookTitle":"发现的书","albumId":"AL-7"}],"hasMore":true}""",
-      "chapters" to """[]""",
-    ))
+    val recorded = RecordedEngine(
+      mapOf(
+        "discoverCategories" to """[{"id":"hot","title":"热榜"}]""",
+        "discover" to """{"books":[{"id":"7","bookTitle":"发现的书","albumId":"AL-7"}],"hasMore":true}""",
+        "chapters" to """[]""",
+      ),
+    )
     val backend = backendWith(recorded.responses, recorded)
     val category = backend.discoveryCategories("jdr:demo")!!.single()
     assertEquals(OnlineDiscoveryCategory("hot", "热榜"), category)
@@ -68,7 +70,7 @@ class ExtensionSourceBackendTest {
     assertEquals("jdr:demo", result.books.single().source)
     assertTrue(recorded.paramsByStage.getValue("discover").contains("\"page\":2"))
     assertTrue(recorded.paramsByStage.getValue("discover").contains("\"categoryId\":\"hot\""))
-    backend.chapters("jdr:demo", "7")
+    assertTrue(backend.chapters("jdr:demo", "7").isEmpty())
     assertTrue(recorded.paramsByStage.getValue("chapters").contains("\"albumId\":\"AL-7\""))
   }
 
@@ -93,17 +95,19 @@ class ExtensionSourceBackendTest {
 
   @Test
   fun selectedBookRestoresExtrasAfterCacheEviction() = runTest {
-    val recorded = RecordedEngine(mapOf(
-      "search" to """[{"id":"7","bookTitle":"书","albumId":"AL-7"}]""",
-      "chapters" to "[]",
-    ))
+    val recorded = RecordedEngine(
+      mapOf(
+        "search" to """[{"id":"7","bookTitle":"书","albumId":"AL-7"}]""",
+        "chapters" to "[]",
+      ),
+    )
     val backend = backendWith(recorded.responses, recorded)
     val book = backend.search("jdr:demo", "书").single()
     repeat(201) { index -> backend.prepareBook(book.copy(bookId = "other-$index")) }
-    backend.chapters("jdr:demo", book.bookId)
+    assertTrue(backend.chapters("jdr:demo", book.bookId).isEmpty())
     assertFalse(recorded.paramsByStage.getValue("chapters").contains("AL-7"))
     backend.prepareBook(book)
-    backend.chapters("jdr:demo", book.bookId)
+    assertTrue(backend.chapters("jdr:demo", book.bookId).isEmpty())
     assertTrue(recorded.paramsByStage.getValue("chapters").contains("AL-7"))
   }
 

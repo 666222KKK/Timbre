@@ -139,7 +139,11 @@ internal fun DiscoveryScreen() {
 }
 
 @Composable
-private fun DiscoverySource(service: OnlineSourceService, source: String, refresh: Int) {
+private fun DiscoverySource(
+  service: OnlineSourceService,
+  source: String,
+  refresh: Int,
+) {
   var categories by remember(source, refresh) { mutableStateOf<List<OnlineDiscoveryCategory>>(emptyList()) }
   var loading by remember(source, refresh) { mutableStateOf(true) }
   var failed by remember(source, refresh) { mutableStateOf(false) }
@@ -246,7 +250,10 @@ private fun DiscoveryBooks(
 }
 
 @Composable
-private fun DiscoveryMessage(message: Int, onRetry: () -> Unit) {
+private fun DiscoveryMessage(
+  message: Int,
+  onRetry: () -> Unit,
+) {
   Column(Modifier.padding(16.dp)) {
     Text(stringResource(message))
     TextButton(onClick = onRetry) { Text(stringResource(StringsR.string.search_online_retry)) }

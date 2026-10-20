@@ -17,9 +17,15 @@ public data class SearchItem(
   public val extra: JsonObject,
 )
 
-public data class DiscoveryCategoryItem(public val id: String, public val title: String)
+public data class DiscoveryCategoryItem(
+  public val id: String,
+  public val title: String,
+)
 
-public data class DiscoveryPageItem(public val books: List<SearchItem>, public val hasMore: Boolean)
+public data class DiscoveryPageItem(
+  public val books: List<SearchItem>,
+  public val hasMore: Boolean,
+)
 
 /** One chapter returned by a source script (standard fields + extras). */
 public data class ChapterItem(

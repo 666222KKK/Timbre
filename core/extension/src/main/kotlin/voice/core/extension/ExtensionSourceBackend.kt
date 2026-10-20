@@ -8,9 +8,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import voice.core.extension.engine.SearchItem
 import voice.core.extension.engine.SourceContract
 import voice.core.online.ExtensionOnlineSource
+import voice.core.online.OnlineChapter
 import voice.core.online.OnlineDiscoveryCategory
 import voice.core.online.OnlineDiscoveryPage
-import voice.core.online.OnlineChapter
 import voice.core.online.OnlineSearchResult
 import voice.core.online.OnlineSourceInfo
 import voice.core.online.ResolvedStream
@@ -76,7 +76,11 @@ public class ExtensionSourceBackend(
     return searchPage(source, keyword, 1)
   }
 
-  private suspend fun searchPage(source: String, keyword: String, page: Int): List<OnlineSearchResult> {
+  private suspend fun searchPage(
+    source: String,
+    keyword: String,
+    page: Int,
+  ): List<OnlineSearchResult> {
     val sourceId = sourceId(source)
     val params = params(
       base = linkedMapOf("keyword" to keyword, "page" to page, "limit" to 30),
@@ -90,7 +94,10 @@ public class ExtensionSourceBackend(
     return mapResults(source, SourceContract.parseSearchResults(json))
   }
 
-  private fun mapResults(source: String, items: List<SearchItem>): List<OnlineSearchResult> {
+  private fun mapResults(
+    source: String,
+    items: List<SearchItem>,
+  ): List<OnlineSearchResult> {
     val sourceId = sourceId(source)
     items.forEach { item ->
       searchExtras.put("$sourceId/${item.id}", item.extra)

@@ -42,7 +42,8 @@ class JsSourceEngineTest {
         discoverCategories: async () => [{id:'hot', title:'热榜'}],
         discover: async p => ({books:[{id:String(p.page),bookTitle:p.categoryId}],hasMore:p.page < 2})
       })""",
-      "demo.js", http(),
+      "demo.js",
+      http(),
     )
     try {
       assertEquals("hot", SourceContract.parseDiscoveryCategories(engine.invoke("discoverCategories", "{}"))!!.single().id)
