@@ -163,32 +163,34 @@ private fun DiscoverySource(
       loading = false
     }
   }
-  when {
-    loading -> CircularProgressIndicator(Modifier.padding(24.dp))
-    failed -> DiscoveryMessage(StringsR.string.search_online_error) { retry++ }
-    categories.isEmpty() -> Text(stringResource(StringsR.string.discovery_no_categories), Modifier.padding(24.dp))
-    else -> {
-      Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-      ) {
-        categories.forEach { category ->
-          FilterChip(
-            selected = selectedId == category.id,
-            onClick = { selectedId = category.id },
-            label = { Text(category.title) },
-          )
+  Column {
+    when {
+      loading -> CircularProgressIndicator(Modifier.padding(24.dp))
+      failed -> DiscoveryMessage(StringsR.string.search_online_error) { retry++ }
+      categories.isEmpty() -> Text(stringResource(StringsR.string.discovery_no_categories), Modifier.padding(24.dp))
+      else -> {
+        Row(
+          Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+          categories.forEach { category ->
+            FilterChip(
+              selected = selectedId == category.id,
+              onClick = { selectedId = category.id },
+              label = { Text(category.title) },
+            )
+          }
         }
-      }
-      categories.firstOrNull { it.id == selectedId }?.let { category ->
-        if (category.keyword != null) {
-          Text(
-            stringResource(StringsR.string.discovery_keyword_hint),
-            Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.bodySmall,
-          )
+        categories.firstOrNull { it.id == selectedId }?.let { category ->
+          if (category.keyword != null) {
+            Text(
+              stringResource(StringsR.string.discovery_keyword_hint),
+              Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+              style = MaterialTheme.typography.bodySmall,
+            )
+          }
+          DiscoveryBooks(service, source, category, refresh)
         }
-        DiscoveryBooks(service, source, category, refresh)
       }
     }
   }
@@ -231,7 +233,13 @@ private fun DiscoveryBooks(
         loading -> CircularProgressIndicator(Modifier.padding(24.dp).size(24.dp))
         failed -> DiscoveryMessage(StringsR.string.search_online_error) { retry++ }
         results.books.isEmpty() -> Text(stringResource(StringsR.string.search_online_no_results), Modifier.padding(24.dp))
-        results.hasMore -> TextButton(onClick = { loading = true; page++ }, modifier = Modifier.fillMaxWidth()) {
+        results.hasMore -> TextButton(
+          onClick = {
+            loading = true
+            page++
+          },
+          modifier = Modifier.fillMaxWidth(),
+        ) {
           Text(stringResource(StringsR.string.discovery_load_more))
         }
         else -> Text(stringResource(StringsR.string.discovery_end), Modifier.padding(24.dp))
