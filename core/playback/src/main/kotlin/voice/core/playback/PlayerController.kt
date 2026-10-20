@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import androidx.media3.session.SessionResult
 import androidx.media3.session.SessionToken
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
@@ -23,8 +24,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.asDeferred
+import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import voice.core.data.Book
 import voice.core.data.BookId
@@ -190,6 +193,17 @@ class PlayerController(
 
   fun next() = executeAfterPrepare { controller ->
     controller.sendCustomCommand(CustomCommand.ForceSeekToNext)
+  }
+
+  suspend fun pauseForBackup() {
+    val existing = _controller ?: return
+    withTimeout(10_000L) {
+      val connected = existing.await()
+      if (connected.isConnected) {
+        val result = connected.sendCustomCommand(CustomCommand.PauseAndFlush).await()
+        check(result.resultCode == SessionResult.RESULT_SUCCESS) { "无法保存播放进度，请稍后重试" }
+      }
+    }
   }
 
   fun play() = executeAfterPrepare { controller ->

@@ -40,7 +40,11 @@ jobs:
           set -euo pipefail
           VERSION="${VERSION_INPUT#v}"
           [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]] || { echo 'Invalid version'; exit 1; }
-          CODE="${CODE_INPUT:-$(jq -r '.versionCode + 1' update.json)}"
+          CODE="$CODE_INPUT"
+          if [ -z "$CODE" ]; then
+            [ "$(jq -r .versionName update.json)" = "$VERSION" ] || { echo "::error::请先将 update.json 更新为该 Release 的版本和递增版本码"; exit 1; }
+            CODE="$(jq -r .versionCode update.json)"
+          fi
           [[ "$CODE" =~ ^[0-9]+$ ]] || exit 1
           for key in TIMBRE_KEYSTORE_BASE64 TIMBRE_STORE_PASSWORD TIMBRE_KEY_ALIAS TIMBRE_KEY_PASSWORD; do
             if [ -z "${!key}" ]; then echo "::error::请先配置签名 Secret: $key，参见 docs/reader-release.md"; exit 1; fi

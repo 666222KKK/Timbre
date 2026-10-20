@@ -30,6 +30,7 @@ import voice.core.data.store.CurrentBookStore
 import voice.core.logging.api.Logger
 import voice.core.online.OnlinePlaybackCatalog
 import voice.core.playback.player.VoicePlayer
+import voice.core.playback.playstate.PositionUpdater
 import voice.core.playback.session.search.BookSearchHandler
 import voice.core.playback.session.search.BookSearchParser
 
@@ -44,6 +45,7 @@ class LibrarySessionCallback(
   private val currentBookStoreId: DataStore<BookId?>,
   private val contentRepo: BookContentRepo,
   private val onlinePlaybackCatalog: OnlinePlaybackCatalog,
+  private val positionUpdater: PositionUpdater,
 ) : MediaLibrarySession.Callback {
 
   override fun onAddMediaItems(
@@ -207,6 +209,11 @@ class LibrarySessionCallback(
     val command = CustomCommand.parse(customCommand, args)
       ?: return super.onCustomCommand(session, controller, customCommand, args)
     when (command) {
+      CustomCommand.PauseAndFlush -> return scope.future {
+        player.pause()
+        positionUpdater.flushPositionNow()
+        SessionResult(SessionResult.RESULT_SUCCESS)
+      }
       CustomCommand.ForceSeekToNext -> {
         player.forceSeekToNext()
       }

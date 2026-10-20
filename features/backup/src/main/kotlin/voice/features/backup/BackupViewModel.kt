@@ -9,7 +9,6 @@ import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import voice.core.backup.BackupArchive
@@ -56,8 +55,7 @@ class BackupViewModel(
 
   fun createLocal(uri: Uri) = run {
     checkPassword()
-    player.pause()
-    delay(300)
+    player.pauseForBackup()
     val data = withContext(Dispatchers.IO) { service.create(password.toCharArray()) }
     withContext(Dispatchers.IO) {
       requireNotNull(application.contentResolver.openOutputStream(uri, "wt")).use { it.write(data) }
@@ -86,8 +84,7 @@ class BackupViewModel(
     checkPassword()
     val resolved = withContext(Dispatchers.IO) { requireNotNull(credentials.byId(serverId)) { "请选择可用的 WebDAV 服务器" } }
     saveOptions()
-    player.pause()
-    delay(300)
+    player.pauseForBackup()
     val bytes = service.create(password.toCharArray())
     remote.upload(resolved.server, resolved.password, directory, name(), bytes)
     message = "WebDAV 备份已上传"
@@ -108,8 +105,7 @@ class BackupViewModel(
 
   fun confirmRestore() = run {
     val contents = requireNotNull(preview)
-    player.pause()
-    delay(300)
+    player.pauseForBackup()
     service.stage(contents)
     preview = null
     password = ""

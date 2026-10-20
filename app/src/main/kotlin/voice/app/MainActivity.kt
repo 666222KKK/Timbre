@@ -12,6 +12,7 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.CompositionLocalProvider
@@ -136,7 +137,7 @@ class MainActivity : AppCompatActivity() {
           SharedTransitionLayout {
             CompositionLocalProvider(LocalSharedTransitionScope provides this) {
               NavDisplay(
-                modifier = Modifier.padding(tabPadding),
+                modifier = Modifier.padding(tabPadding).consumeWindowInsets(tabPadding),
                 backStack = backStack,
                 sceneStrategies = listOf(bottomSheetStrategy, dialogStrategy),
                 sharedTransitionScope = this,

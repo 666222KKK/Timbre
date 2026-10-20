@@ -14,6 +14,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import voice.core.webdav.KeystoreWebDavSecrets
+import voice.core.webdav.WebDavSecrets
 import java.io.File
 
 object PendingBackupRestore {
@@ -29,6 +30,7 @@ object PendingBackupRestore {
   fun stage(
     application: Application,
     contents: BackupContents,
+    secrets: WebDavSecrets = KeystoreWebDavSecrets(),
   ) {
     val pending = File(application.noBackupFilesDir, PENDING)
     val temp = File(application.noBackupFilesDir, "$PENDING-new")
@@ -45,7 +47,6 @@ object PendingBackupRestore {
       }.orEmpty()
       val serverFile = File(temp, "files/datastore/webDavServers")
       if (serverFile.exists()) {
-        val secrets = KeystoreWebDavSecrets()
         val servers = Json.parseToJsonElement(serverFile.readText()).jsonArray.map { element ->
           val server = element.jsonObject
           val id = server.getValue("id").jsonPrimitive.content
@@ -69,7 +70,9 @@ object PendingBackupRestore {
           "UPDATE content2 SET cover = replace(cover, ?, ?) WHERE cover IS NOT NULL",
           arrayOf(contents.manifest.filesPath, application.filesDir.path),
         )
-        db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null).use { it.moveToFirst() }
+        db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null).use { cursor ->
+          check(cursor.moveToFirst() && cursor.getInt(0) == 0) { "备份数据库日志合并失败" }
+        }
       }
       File(temp, "databases/autoBookDB-shm").delete()
       File(temp, "ready").writeText("1")

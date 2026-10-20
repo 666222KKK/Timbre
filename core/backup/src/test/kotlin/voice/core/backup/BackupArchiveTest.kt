@@ -38,6 +38,12 @@ class BackupArchiveTest {
   }
 
   @Test
+  fun emptyOriginalDirectoryIsRejectedBeforeRestore() {
+    val invalid = contents().copy(manifest = contents().manifest.copy(filesPath = ""))
+    assertFailsWith<IllegalArgumentException> { BackupArchive.decode(BackupArchive.encode(invalid, password), password) }
+  }
+
+  @Test
   fun pathPolicyExcludesTraversalAudioAndArbitraryPrivateFiles() {
     listOf(
       "../datastore/a",

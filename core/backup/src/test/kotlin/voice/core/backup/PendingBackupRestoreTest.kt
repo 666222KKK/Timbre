@@ -5,10 +5,13 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import voice.core.webdav.WebDavSecrets
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class PendingBackupRestoreTest {
@@ -43,6 +46,51 @@ class PendingBackupRestoreTest {
       db.rawQuery("SELECT cover FROM content2", null).use { cursor ->
         assertEquals(true, cursor.moveToFirst())
         assertEquals("${app.filesDir.path}/bookCovers/a.png", cursor.getString(0))
+      }
+    }
+  }
+
+  @Test
+  fun restoredWebDavCredentialsUseTheNewDeviceKey() {
+    val contents = BackupContents(
+      BackupManifest(createdAt = 1, filesPath = "/old/files", databaseVersion = 61),
+      mapOf(
+        "databases/autoBookDB" to database(),
+        "files/datastore/webDavServers" to """[{"id":"server","encryptedPassword":"old-cipher"}]""".toByteArray(),
+        "webdav-secrets.json" to """{"server":"secret"}""".toByteArray(),
+      ),
+    )
+    val secrets = object : WebDavSecrets {
+      override fun encrypt(plain: String): String = "new-device:$plain"
+      override fun decrypt(encrypted: String): String? = null
+    }
+    PendingBackupRestore.stage(app, contents, secrets)
+    assertFalse(File(app.noBackupFilesDir, "timbre-restore-pending/webdav-secrets.json").exists())
+    PendingBackupRestore.applyOnStartup(app)
+    val restored = File(app.filesDir, "datastore/webDavServers").readText()
+    assertTrue(restored.contains("new-device:secret"))
+    assertFalse(restored.contains("old-cipher"))
+  }
+
+  @Test
+  fun committedWalEntriesAreRestoredWithTheDatabase() {
+    val file = File(app.cacheDir, "wal-backup.db")
+    val contents = SQLiteDatabase.openOrCreateDatabase(file, null).use { db ->
+      assertTrue(db.enableWriteAheadLogging())
+      db.version = 61
+      db.execSQL("CREATE TABLE content2 (id TEXT PRIMARY KEY, cover TEXT)")
+      db.execSQL("INSERT INTO content2 VALUES ('wal-book', '/old/files/bookCovers/wal.png')")
+      BackupContents(
+        BackupManifest(createdAt = 1, filesPath = "/old/files", databaseVersion = 61),
+        mapOf("databases/autoBookDB" to file.readBytes(), "databases/autoBookDB-wal" to File(file.path + "-wal").readBytes()),
+      )
+    }
+    PendingBackupRestore.stage(app, contents)
+    PendingBackupRestore.applyOnStartup(app)
+    SQLiteDatabase.openDatabase(app.getDatabasePath("autoBookDB").path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+      db.rawQuery("SELECT cover FROM content2 WHERE id = 'wal-book'", null).use { cursor ->
+        assertTrue(cursor.moveToFirst())
+        assertEquals("${app.filesDir.path}/bookCovers/wal.png", cursor.getString(0))
       }
     }
   }

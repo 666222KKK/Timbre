@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/build_setup
       - name: Focused tests
-        run: ./gradlew :core:backup:testDebugUnitTest :features:settings:testDebugUnitTest :app:testFreeDebugUnitTest --max-workers=2
+        run: ./gradlew :core:backup:testDebugUnitTest :core:playback:testDebugUnitTest :features:settings:testDebugUnitTest :app:testFreeDebugUnitTest --max-workers=2
       - name: All tests
         run: ./gradlew voiceUnitTest --max-workers=2
       - name: Formatting and Android lint

@@ -24,19 +24,12 @@ class UpdateChecker {
     ignoreUnknownKeys = true
   }
 
-  // raw.githubusercontent.com first: it reflects main within a minute of a
-  // push. jsDelivr follows as fallback because it is reachable from mainland
-  // China where github often is not — but it caches branch URLs for up to 12h
-  // and its purge API is unreliable, so right after a release it serves stale
-  // notes and even a lower version, which the update prompt then offers as a
-  // "downgrade". The GitHub api is the last resort; it always answers with the
-  // freshly published release and its body. Every endpoint is tried in order
-  // and a failure or a timeout of one is silently ignored.
+  // Releases are authoritative for this fork; metadata mirrors provide a network fallback.
   private val endpoints = listOf(
+    "https://api.github.com/repos/666222KKK/Timbre/releases/latest",
     "https://raw.githubusercontent.com/666222KKK/Timbre/main/update.json",
     "https://cdn.jsdelivr.net/gh/666222KKK/Timbre@main/update.json",
     "https://fastly.jsdelivr.net/gh/666222KKK/Timbre@main/update.json",
-    "https://api.github.com/repos/666222KKK/Timbre/releases/latest",
   )
 
   /**
