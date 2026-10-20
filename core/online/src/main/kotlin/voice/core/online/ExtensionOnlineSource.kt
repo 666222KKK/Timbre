@@ -25,6 +25,8 @@ public interface ExtensionOnlineSource {
 
   public suspend fun discoveryCategories(source: String): List<OnlineDiscoveryCategory>? = null
 
+  public fun prepareBook(book: OnlineSearchResult) {}
+
   public suspend fun discover(
     source: String,
     category: OnlineDiscoveryCategory,

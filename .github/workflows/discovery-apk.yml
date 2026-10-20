@@ -1,0 +1,53 @@
+name: Discovery tests and APK
+
+on:
+  push:
+    branches: [ feature/discovery ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: discovery-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/build_setup
+      - name: Discovery and source regression tests
+        run: ./gradlew :core:extension-engine:test :core:online:testDebugUnitTest :core:extension:testDebugUnitTest :features:bookOverview:testDebugUnitTest :navigation:testDebugUnitTest :app:testFreeDebugUnitTest --max-workers=2
+      - name: All unit tests
+        run: ./gradlew voiceUnitTest --max-workers=2
+      - name: Android lint
+        run: ./gradlew :app:lintFreeDebug
+      - name: Build installable discovery test APK
+        run: ./gradlew :app:assembleFreeDebug -Pvoice.applicationId=app.timbre.audiobook.discovery -Pvoice.versionName=3.6.1-discovery -Pvoice.versionCode=1
+      - name: Collect APK and checksum
+        run: |
+          mkdir -p package
+          cp app/build/outputs/apk/free/debug/app-free-debug.apk package/timbre-discovery-debug.apk
+          cd package
+          sha256sum timbre-discovery-debug.apk > SHA256SUMS.txt
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: timbre-discovery-debug
+          path: package/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload test and lint reports
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: discovery-test-reports
+          path: |
+            **/build/test-results/**/*.xml
+            **/build/reports/tests/**
+            app/build/reports/lint-results*
+          if-no-files-found: ignore

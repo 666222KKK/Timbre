@@ -78,7 +78,7 @@ internal fun DiscoveryScreen() {
     loading = true
     failed = false
     try {
-      sources = service.sources().filter { it.enabled }.distinctBy { it.name }
+      sources = service.sources(reportServerErrors = true).filter { it.enabled }.distinctBy { it.name }
       if (sources.none { it.name == selectedSource }) selectedSource = sources.firstOrNull()?.name.orEmpty()
     } catch (e: CancellationException) {
       throw e

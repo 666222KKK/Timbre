@@ -84,6 +84,30 @@ class ExtensionSourceBackendTest {
   }
 
   @Test
+  fun shortLegacyPagesCanStillLoadMore() = runTest {
+    val recorded = RecordedEngine(mapOf("search" to """[{"id":"7","bookTitle":"书"}]"""))
+    val backend = backendWith(recorded.responses, recorded)
+    val result = backend.discover("jdr:demo", OnlineDiscovery.searchCategories.first(), 1)
+    assertTrue(result.hasMore)
+  }
+
+  @Test
+  fun selectedBookRestoresExtrasAfterCacheEviction() = runTest {
+    val recorded = RecordedEngine(mapOf(
+      "search" to """[{"id":"7","bookTitle":"书","albumId":"AL-7"}]""",
+      "chapters" to "[]",
+    ))
+    val backend = backendWith(recorded.responses, recorded)
+    val book = backend.search("jdr:demo", "书").single()
+    repeat(201) { index -> backend.prepareBook(book.copy(bookId = "other-$index")) }
+    backend.chapters("jdr:demo", book.bookId)
+    assertFalse(recorded.paramsByStage.getValue("chapters").contains("AL-7"))
+    backend.prepareBook(book)
+    backend.chapters("jdr:demo", book.bookId)
+    assertTrue(recorded.paramsByStage.getValue("chapters").contains("AL-7"))
+  }
+
+  @Test
   fun handlesOnlyJdrSources() {
     val backend = backendWith(emptyMap(), RecordedEngine(emptyMap()))
     assertTrue(backend.handles("jdr:demo"))

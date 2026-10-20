@@ -104,6 +104,7 @@ public class ExtensionSourceBackend(
         cover = item.cover,
         intro = item.intro,
         trackCount = item.trackCount,
+        extra = item.extra,
       )
     }
   }
@@ -124,7 +125,7 @@ public class ExtensionSourceBackend(
     val keyword = category.keyword
     if (keyword != null) {
       val books = searchPage(source, keyword, page)
-      return OnlineDiscoveryPage(books, hasMore = books.size >= 30)
+      return OnlineDiscoveryPage(books, hasMore = books.isNotEmpty())
     }
     val json = engineProvider.useEngine(sourceId(source)) {
       it.invoke("discover", params(linkedMapOf("categoryId" to category.id, "page" to page, "limit" to 30)))
@@ -156,6 +157,12 @@ public class ExtensionSourceBackend(
         durationSeconds = item.durationSeconds.toInt(),
         order = item.order,
       )
+    }
+  }
+
+  override fun prepareBook(book: OnlineSearchResult) {
+    if (book.extra.isNotEmpty()) {
+      searchExtras.put("${sourceId(book.source)}/${book.bookId}", book.extra)
     }
   }
 
