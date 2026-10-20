@@ -110,6 +110,18 @@ class PendingBackupRestoreTest {
   }
 
   @Test
+  fun interruptedJournalPreparationLeavesCurrentDataUntouched() {
+    val setting = File(app.filesDir, "datastore/themeMode").also {
+      it.parentFile!!.mkdirs()
+      it.writeText("original")
+    }
+    val rollback = File(app.noBackupFilesDir, "timbre-restore-rollback").also { it.mkdirs() }
+    File(rollback, "journal-new.json").writeText("[{broken")
+    PendingBackupRestore.applyOnStartup(app)
+    assertEquals("original", setting.readText())
+  }
+
+  @Test
   fun interruptedRestoreRecoversOriginalDataBeforeOpeningStores() {
     val target = File(app.filesDir, "datastore/themeMode").also {
       it.parentFile!!.mkdirs()

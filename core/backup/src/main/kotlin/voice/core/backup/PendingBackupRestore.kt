@@ -99,7 +99,9 @@ object PendingBackupRestore {
     val moves = roots.map { Move(it, target(application, it).exists()) }
     try {
       check(rollback.mkdirs())
-      File(rollback, "journal.json").writeText(Json.encodeToString(moves))
+      val journal = File(rollback, "journal-new.json")
+      journal.writeText(Json.encodeToString(moves))
+      check(journal.renameTo(File(rollback, "journal.json")))
       moves.forEach { move ->
         val destination = target(application, move.path)
         val old = File(rollback, move.path)
