@@ -1,57 +1,44 @@
 package voice.features.cover.api
 
-import android.app.Application
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import dev.zacsweers.metro.AppScope
-import dev.zacsweers.metro.DependencyGraph
-import dev.zacsweers.metro.Provides
-import dev.zacsweers.metro.SingleIn
-import dev.zacsweers.metro.createGraph
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.test.runTest
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import okhttp3.OkHttpClient
 import org.junit.runner.RunWith
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
-
-@Suppress("SUSPICIOUS_UNUSED_MULTIBINDING")
-@SingleIn(AppScope::class)
-@DependencyGraph(
-  scope = AppScope::class,
-)
-interface TestGraph {
-  val coverApi: CoverApi
-
-  @Provides
-  fun application(): Application = ApplicationProvider.getApplicationContext()
-
-  @Provides
-  fun context(): Context = ApplicationProvider.getApplicationContext()
-
-  @Provides
-  fun scope(): CoroutineScope = CoroutineScope(Dispatchers.Main)
-
-  @Provides
-  fun json(): Json = Json.Default
-}
 
 @RunWith(AndroidJUnit4::class)
 internal class CoverApiTest {
-
   @Test
-  fun test() {
-    runBlocking {
-      val api = createGraph<TestGraph>().coverApi
-      val query = "unicorns"
+  fun searchUsesTheTokenAndDecodesImageResults() = runTest {
+    MockWebServer().use { server ->
+      server.start()
+      server.enqueue(MockResponse.Builder().body("vqd=123-456&source=images").build())
+      server.enqueue(
+        MockResponse.Builder().body(
+          """{"next":null,"results":[{"width":600,"height":900,"image":"https://example.com/cover.jpg","thumbnail":"https://example.com/thumb.jpg","extra":"ignored"}]}""",
+        ).build(),
+      )
+      val client = OkHttpClient.Builder().addInterceptor { chain ->
+        val request = chain.request()
+        val localUrl = server.url(request.url.encodedPath).newBuilder().encodedQuery(request.url.encodedQuery).build()
+        chain.proceed(request.newBuilder().url(localUrl).build())
+      }.build()
+      val api = CoverApi(object : CoverModule {}.internalApi(client))
+      val query = "三体 & books"
       val token = assertNotNull(api.token(query))
-      assertTrue(token.isNotEmpty())
-      api.search(query = query, auth = token)
-        .results
-        .let { assertTrue(it.isNotEmpty()) }
+      assertEquals("123-456", token)
+      val result = api.search(query, token)
+      assertEquals("https://example.com/cover.jpg", result.results.single().image)
+      assertEquals(900, result.results.single().height)
+      assertEquals(query, server.takeRequest().url.queryParameter("q"))
+      val search = server.takeRequest()
+      assertEquals("/i.js", search.url.encodedPath)
+      assertEquals(query, search.url.queryParameter("q"))
+      assertEquals(token, search.url.queryParameter("vqd"))
     }
   }
 }

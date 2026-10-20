@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.edit
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -130,7 +131,10 @@ class BackupViewModel(
   }
 
   private fun saveOptions() {
-    options.edit().putString("server", serverId).putString("directory", directory).apply()
+    options.edit {
+      putString("server", serverId)
+      putString("directory", directory)
+    }
   }
 
   private fun run(action: suspend () -> Unit) {
