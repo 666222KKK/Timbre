@@ -71,6 +71,22 @@ class ExtensionWebSessionsTest {
   }
 
   @Test
+  fun resolvedCdnStreamKeepsTheVerifiedAgentWithoutTheWebsiteCookie() {
+    store.save("moon", 1, "https://asmrmoon.com/", "session=secret", "Browser/verified")
+    val result = store.streamHeaders(
+      "moon",
+      1,
+      "https://cdn.example.com/file.mp3",
+      mapOf("user-agent" to "Script/old", "Cookie" to "session=secret", "Referer" to "https://asmrmoon.com/"),
+      "Browser/verified",
+    )
+    assertNull(result["Cookie"])
+    assertNull(result["user-agent"])
+    assertEquals("Browser/verified", result["User-Agent"])
+    assertEquals("https://asmrmoon.com/", result["Referer"])
+  }
+
+  @Test
   fun networkInterceptorAddsSessionOnlyOnTheGrantedOriginAndRemovesItOnRedirects() {
     store.save("moon", 1, "https://asmrmoon.com/", "session=secret", "Browser/1")
     fun intercepted(request: Request): Request {

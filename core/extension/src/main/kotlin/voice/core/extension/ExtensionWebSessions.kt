@@ -102,10 +102,21 @@ public class ExtensionWebSessions(
       require(response.code == 200 || response.code == 206) { "音频请求失败（${response.code}），请更新网站验证会话" }
       require(!response.body.contentType().toString().contains("text/html", ignoreCase = true)) { "音频需要网站验证，请更新会话" }
       val finalUrl = response.request.url.toString()
-      val sessionHeaders = headers(packageId, installedAtMillis, finalUrl)
-      val outgoing = originalHeaders.filterKeys { !it.equals("Cookie", ignoreCase = true) } + sessionHeaders
+      val outgoing = streamHeaders(packageId, installedAtMillis, finalUrl, originalHeaders, response.request.header("User-Agent"))
       ResolvedStream(finalUrl, outgoing)
     }
+  }
+
+  internal fun streamHeaders(
+    packageId: String,
+    installedAtMillis: Long,
+    finalUrl: String,
+    originalHeaders: Map<String, String>,
+    userAgent: String?,
+  ): Map<String, String> {
+    val outgoing = originalHeaders.filterKeys { !it.equals("Cookie", ignoreCase = true) && !it.equals("User-Agent", ignoreCase = true) }
+    val agent = userAgent?.let { mapOf("User-Agent" to it) }.orEmpty()
+    return outgoing + agent + headers(packageId, installedAtMillis, finalUrl)
   }
 
   private fun persist(values: Map<String, String>) {
