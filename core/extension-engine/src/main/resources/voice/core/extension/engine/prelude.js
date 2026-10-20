@@ -187,6 +187,7 @@
   globalThis.log = (...args) => host('__log')(args.map((a) => String(a)).join(' '));
 
   globalThis.http = {
+    sleep: async (milliseconds) => { await host('__sleep')(Number(milliseconds) | 0); },
     get: async (url, options = {}) =>
       JSON.parse(await host('__httpRequest')('GET', String(url), JSON.stringify(options))),
     post: async (url, options = {}) =>

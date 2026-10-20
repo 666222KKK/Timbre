@@ -28,6 +28,21 @@ class JsSourceEngineTest {
   private fun http(): SandboxHttp = OkHttpSandboxHttp(okhttp3.OkHttpClient())
 
   @Test
+  fun nonBlockingSleepBridgeResumesTheSource() = runTest {
+    val engine = JsSourceEngine.create(
+      "demo",
+      "registerSource({id:'demo', search:async()=>{await http.sleep(1);return [{id:'1',bookTitle:'Ready'}]}})",
+      "demo.js",
+      http(),
+    )
+    try {
+      assertEquals("Ready", SourceContract.parseSearchResults(engine.invoke("search", "{}")).single().title)
+    } finally {
+      engine.close()
+    }
+  }
+
+  @Test
   fun optionalDiscoveryStagesRemainCompatible() = runTest {
     val legacy = JsSourceEngine.create("demo", "registerSource({id:'demo', search: async () => []})", "demo.js", http())
     try {

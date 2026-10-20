@@ -45,6 +45,7 @@ private class BoundedCache(private val maxSize: Int = 200) {
 public class ExtensionSourceBackend(
   private val engineProvider: ExtensionEngineProvider,
   private val manager: ExtensionManager,
+  private val webSessions: ExtensionWebSessions,
 ) : ExtensionOnlineSource {
 
   /** "<sourceId>/<bookId>" → search result extras. */
@@ -187,7 +188,12 @@ public class ExtensionSourceBackend(
       it.invoke("audio", params)
     }
     val parsed = SourceContract.parseAudio(json)
-    return ResolvedStream(parsed.url, parsed.headers)
+    val pkg = manager.packageFor(sourceId)
+    return if (pkg != null && !pkg.manifest.allowInsecure) {
+      webSessions.media(pkg.manifest.id, pkg.installedAtMillis, parsed.url, parsed.headers)
+    } else {
+      ResolvedStream(parsed.url, parsed.headers)
+    }
   }
 
   private fun sourceId(source: String): String = source.removePrefix(ExtensionEngineProvider.SOURCE_PREFIX)

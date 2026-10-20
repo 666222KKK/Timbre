@@ -1,6 +1,6 @@
 {
-  "versionName": "3.6.2.1",
-  "versionCode": 633,
+  "versionName": "3.6.2.2",
+  "versionCode": 634,
   "releaseUrl": "https://github.com/666222KKK/Timbre/releases/latest",
-  "releaseNotes": "同步上游 3.6.2；书架、发现、设置三栏；加密本地及 WebDAV 备份恢复；精简 Release 安装包。"
+  "releaseNotes": "新增 ASMR MOON 接口源及网站验证会话；人工完成验证后可供本地书源请求使用。"
 }
