@@ -3,9 +3,11 @@ package voice.core.backup
 import android.app.Application
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.serialization.json.Json
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import voice.core.webdav.WebDavSecrets
+import voice.core.webdav.WebDavServer
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -70,6 +72,50 @@ class PendingBackupRestoreTest {
     val restored = File(app.filesDir, "datastore/webDavServers").readText()
     assertTrue(restored.contains("new-device:secret"))
     assertFalse(restored.contains("old-cipher"))
+  }
+
+  @Test
+  fun backupAccountRemainsSeparateAndPortableAlongsideSourcesListsProgressAndSettings() {
+    val connection =
+      BackupConnection(
+        WebDavServer("timbre-backup", "备份", "https://dav.jianguoyun.com/dav/", "backup@example.com", "old-backup-key"),
+        "Timbre/backup",
+      )
+    val data = mapOf(
+      "databases/autoBookDB" to database(),
+      "files/datastore/backupWebDavConnection" to Json.encodeToString(connection).toByteArray(),
+      "backup-webdav-secret.json" to Json.encodeToString("backup-password").toByteArray(),
+      "files/datastore/webDavServers" to """[{"id":"audio","encryptedPassword":"old-audio-key"}]""".toByteArray(),
+      "webdav-secrets.json" to """{"audio":"audio-password"}""".toByteArray(),
+      "files/datastore/currentBook" to "123".toByteArray(),
+      "files/datastore/themeMode" to "\"Dark\"".toByteArray(),
+      "files/online_chapter_lists/book.json" to "[{\"id\":\"chapter-2\"}]".toByteArray(),
+      "files/extensions/moon/script.js" to "export default {}".toByteArray(),
+    )
+    val contents = BackupArchive.decode(
+      BackupArchive.encode(
+        BackupContents(
+          BackupManifest(createdAt = 1, filesPath = "/old/files", databaseVersion = 61),
+          data,
+        ),
+        "archive-password".toCharArray(),
+      ),
+      "archive-password".toCharArray(),
+    )
+    val secrets = object : WebDavSecrets {
+      override fun encrypt(plain: String): String = "new-device:$plain"
+      override fun decrypt(encrypted: String): String? = encrypted.removePrefix("new-device:")
+    }
+    PendingBackupRestore.stage(app, contents, secrets)
+    PendingBackupRestore.applyOnStartup(app)
+    val restored = BackupConnectionStore(app, secrets).read()!!
+    assertEquals("backup@example.com", restored.server.username)
+    assertEquals("backup-password", BackupConnectionStore(app, secrets).password(restored))
+    assertTrue(File(app.filesDir, "datastore/webDavServers").readText().contains("new-device:audio-password"))
+    listOf("datastore/currentBook", "datastore/themeMode", "online_chapter_lists/book.json", "extensions/moon/script.js").forEach {
+      assertEquals(data.getValue("files/$it").decodeToString(), File(app.filesDir, it).readText())
+    }
+    assertFalse(File(app.noBackupFilesDir, "timbre-restore-pending/backup-webdav-secret.json").exists())
   }
 
   @Test

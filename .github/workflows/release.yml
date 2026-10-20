@@ -6,11 +6,11 @@ on:
       versionName:
         description: '版本名，如 3.6.2.1'
         required: true
-        default: '3.6.2.2'
+        default: '3.6.2.3'
       versionCode:
         description: '递增版本号，如 633'
         required: true
-        default: '634'
+        default: '635'
   release:
     types: [published]
 

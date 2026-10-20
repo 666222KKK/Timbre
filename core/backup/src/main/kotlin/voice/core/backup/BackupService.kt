@@ -27,6 +27,7 @@ class BackupService(
   private val database: RoomDatabase,
   @WebDavServersStore private val servers: DataStore<List<WebDavServer>>,
   private val secrets: WebDavSecrets,
+  private val connectionStore: BackupConnectionStore,
 ) {
   private val mutex = Mutex()
 
@@ -50,6 +51,9 @@ class BackupService(
         MapSerializer(String.serializer(), String.serializer()),
         passwords,
       ).toByteArray()
+      connectionStore.read()?.let { connection ->
+        files["backup-webdav-secret.json"] = Json.encodeToString(connectionStore.password(connection)).toByteArray()
+      }
       var version = 0
       database.transaction {
         val db = database.openHelper.writableDatabase

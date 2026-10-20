@@ -1,6 +1,6 @@
 {
-  "versionName": "3.6.2.2",
-  "versionCode": 634,
+  "versionName": "3.6.2.3",
+  "versionCode": 635,
   "releaseUrl": "https://github.com/666222KKK/Timbre/releases/latest",
-  "releaseNotes": "新增 ASMR MOON 接口源及网站验证会话；人工完成验证后可供本地书源请求使用。"
+  "releaseNotes": "修复 WebDAV 备份按钮与连接测试；分离备份和音频播放配置，上传后核对云端文件，支持完整数据与配置恢复。"
 }

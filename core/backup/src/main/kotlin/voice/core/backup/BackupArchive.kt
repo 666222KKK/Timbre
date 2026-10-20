@@ -42,7 +42,7 @@ object BackupArchive {
 
   fun allowed(name: String): Boolean {
     if (name.contains('\\') || name.startsWith('/') || name.split('/').any { it == ".." || it == "." || it.isEmpty() }) return false
-    return name == "manifest.json" || name == "webdav-secrets.json" ||
+    return name == "manifest.json" || name == "webdav-secrets.json" || name == "backup-webdav-secret.json" ||
       name in setOf("databases/autoBookDB", "databases/autoBookDB-wal") ||
       directories.any { name.startsWith("files/$it/") }
   }
