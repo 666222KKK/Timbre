@@ -62,7 +62,7 @@ import voice.core.strings.R as StringsR
 interface BackupGraph {
   val backupViewModel: BackupViewModel
   val navigator: Navigator
-  val application: Application
+  val backupApplication: Application
 
   @Provides
   @IntoSet
@@ -215,7 +215,7 @@ private fun BackupScreen() {
       onDismissRequest = {},
       title = { Text("重启以完成恢复") },
       text = { Text("备份已校验。应用将重启并应用数据；若应用未自动打开，请手动重新打开。") },
-      confirmButton = { TextButton(onClick = { restart(graph.application) }) { Text("立即重启") } },
+      confirmButton = { TextButton(onClick = { restart(graph.backupApplication) }) { Text("立即重启") } },
     )
   }
 }
