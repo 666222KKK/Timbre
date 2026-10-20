@@ -213,7 +213,7 @@ internal fun OnlineSearchSection(
 }
 
 @Composable
-private fun OnlineResultRow(
+internal fun OnlineResultRow(
   result: OnlineSearchResult,
   onClick: () -> Unit,
 ) {
@@ -257,7 +257,7 @@ private data class ChaptersUiState(
 )
 
 @Composable
-private fun OnlineChaptersDialog(
+internal fun OnlineChaptersDialog(
   service: OnlineSourceService,
   catalog: OnlinePlaybackCatalog,
   book: OnlineSearchResult,
@@ -332,7 +332,8 @@ private fun OnlineChaptersDialog(
   val state by produceState(initialValue = ChaptersUiState(), book, reloadKey) {
     value = ChaptersUiState(loading = true)
     offline = false
-    val result = runCatching { service.chapters(book.source, book.bookId) }
+    val result = runCatching { service.chapters(book) }
+      .onFailure { if (it is CancellationException) throw it }
     value = result.fold(
       onSuccess = { ChaptersUiState(loading = false, chapters = it) },
       onFailure = {

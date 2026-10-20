@@ -4,6 +4,7 @@ import android.app.Application
 import dev.zacsweers.metro.HasMemberInjections
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.createGraphFactory
+import voice.core.backup.PendingBackupRestore
 import voice.core.common.rootGraph
 import voice.core.initializer.AppInitializer
 
@@ -15,6 +16,8 @@ open class App : Application() {
 
   override fun onCreate() {
     super.onCreate()
+
+    PendingBackupRestore.applyOnStartup(this)
 
     rootGraph = createGraph()
       .also { graph ->

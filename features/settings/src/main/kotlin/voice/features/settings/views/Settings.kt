@@ -86,22 +86,19 @@ private fun Settings(
         title = {
           Text(stringResource(StringsR.string.settings_action_open))
         },
-        navigationIcon = {
-          IconButton(
-            onClick = {
-              listener.close()
-            },
-          ) {
-            Icon(
-              imageVector = VoiceIcons.Close,
-              contentDescription = stringResource(StringsR.string.common_action_close),
-            )
-          }
-        },
       )
     },
   ) { contentPadding ->
     LazyColumn(contentPadding = contentPadding) {
+      item {
+        ListItem(
+          modifier = Modifier.clickable { listener.openBackup() },
+          leadingContent = { Icon(VoiceIcons.Download, contentDescription = null) },
+          supportingContent = { Text(stringResource(StringsR.string.backup_summary)) },
+        ) {
+          Text(stringResource(StringsR.string.backup_title))
+        }
+      }
       if (viewState.showDeveloperMenu && !viewState.kioskMode) {
         item {
           DeveloperMenuItem(

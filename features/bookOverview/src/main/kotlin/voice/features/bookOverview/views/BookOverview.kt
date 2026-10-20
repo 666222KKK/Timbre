@@ -101,7 +101,6 @@ fun BookOverviewScreen(modifier: Modifier = Modifier) {
   var showBottomSheet by remember { mutableStateOf(false) }
   BookOverview(
     viewState = viewState,
-    onSettingsClick = bookOverviewViewModel::onSettingsClick,
     onBookClick = bookOverviewViewModel::onBookClick,
     onBookLongClick = { bookId ->
       bottomSheetViewModel.bookSelected(bookId)
@@ -215,7 +214,6 @@ fun BookOverviewScreen(modifier: Modifier = Modifier) {
 @Composable
 internal fun BookOverview(
   viewState: BookOverviewViewState,
-  onSettingsClick: () -> Unit,
   onBookClick: (BookId) -> Unit,
   onBookLongClick: (BookId) -> Unit,
   onRetryImport: (BookId) -> Unit,
@@ -236,13 +234,13 @@ internal fun BookOverview(
       BookOverviewTopBar(
         viewState = viewState,
         onBookFolderClick = onBookFolderClick,
-        onSettingsClick = onSettingsClick,
         onActiveChange = onSearchActiveChange,
         onQueryChange = onSearchQueryChange,
         onSearchBookClick = onSearchBookClick,
         onClearSearchHistory = onClearSearchHistory,
       )
     },
+
     floatingActionButton = {
       if (viewState.playButtonState != null) {
         PlayButton(
@@ -308,7 +306,6 @@ fun BookOverviewPreview(
   VoiceTheme {
     BookOverview(
       viewState = viewState,
-      onSettingsClick = {},
       onBookClick = {},
       onBookLongClick = {},
       onRetryImport = {},

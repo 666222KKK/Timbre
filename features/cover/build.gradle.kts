@@ -24,6 +24,7 @@ dependencies {
   implementation(libs.navigation3.ui)
 
   implementation(libs.serialization.json)
+  testImplementation(libs.mockwebserver)
   testImplementation(projects.core.data.impl)
   testImplementation(libs.bundles.testing.jvm)
   testImplementation(projects.core.remoteconfig.noop)

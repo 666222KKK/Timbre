@@ -34,6 +34,12 @@ import kotlin.time.Instant
 
 class SettingsViewModelTest {
 
+  @Test
+  fun backupEntryOpensBackupScreen() {
+    viewModel.openBackup()
+    verify { navigator.goTo(Destination.Backup) }
+  }
+
   private val scope = TestScope()
   private val themeModeStore = MemoryDataStore(ThemeMode.FollowSystem)
   private val themeColorSchemeStore = MemoryDataStore(ThemeColorScheme.VoiceBlue)

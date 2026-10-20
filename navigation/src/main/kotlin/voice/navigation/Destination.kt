@@ -71,6 +71,11 @@ sealed interface Destination {
   }
 
   @Serializable
+  data object Discovery : Compose {
+    override val trackingName: String get() = "Discovery"
+  }
+
+  @Serializable
   data object FolderPicker : Compose {
     override val trackingName: String get() = "FolderPicker"
   }
@@ -118,5 +123,10 @@ sealed interface Destination {
   @Serializable
   data object ExtensionSources : Compose {
     override val trackingName: String get() = "ExtensionSources"
+  }
+
+  @Serializable
+  data object Backup : Compose {
+    override val trackingName: String get() = "Backup"
   }
 }

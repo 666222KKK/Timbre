@@ -1,6 +1,7 @@
 package voice.core.online
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 /** One source (interface) exposed by the download site: /api/interfaces. */
 @Serializable
@@ -22,6 +23,7 @@ public data class OnlineSearchResult(
   val cover: String = "",
   val intro: String = "",
   val trackCount: Int = 0,
+  val extra: JsonObject = JsonObject(emptyMap()),
 )
 
 /** Unified chapter of an online book. */

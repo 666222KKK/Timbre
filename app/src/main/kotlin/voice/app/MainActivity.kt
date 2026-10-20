@@ -11,10 +11,15 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
@@ -28,8 +33,10 @@ import kotlinx.coroutines.runBlocking
 import voice.app.cache.OnlineCacheMeteredPrompt
 import voice.app.navigation.BottomSheetSceneStrategy
 import voice.app.navigation.NavEntryResolver
+import voice.app.navigation.ReaderTabs
 import voice.app.navigation.StartDestination
 import voice.app.navigation.StartDestinationProvider
+import voice.app.navigation.readerTabs
 import voice.core.analytics.api.Analytics
 import voice.core.common.rootGraphAs
 import voice.core.data.ThemeColorScheme
@@ -119,34 +126,46 @@ class MainActivity : AppCompatActivity() {
         val dialogStrategy = remember { DialogSceneStrategy<Destination.Compose>() }
         val density = LocalDensity.current
 
-        SharedTransitionLayout {
-          CompositionLocalProvider(LocalSharedTransitionScope provides this) {
-            NavDisplay(
-              backStack = backStack,
-              sceneStrategies = listOf(bottomSheetStrategy, dialogStrategy),
-              sharedTransitionScope = this,
-              transitionSpec = {
-                if (isBookOverviewPlaybackTransition(initialState.destination(), targetState.destination())) {
+        Scaffold(
+          contentWindowInsets = WindowInsets(0, 0, 0, 0),
+          bottomBar = {
+            if (backStack.last() in readerTabs) {
+              ReaderTabs(backStack.last(), navigator::setRoot)
+            }
+          },
+        ) { tabPadding ->
+          SharedTransitionLayout {
+            CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+              NavDisplay(
+                modifier = Modifier.padding(tabPadding).consumeWindowInsets(tabPadding),
+                backStack = backStack,
+                sceneStrategies = listOf(bottomSheetStrategy, dialogStrategy),
+                sharedTransitionScope = this,
+                transitionSpec = {
+                  if (isBookOverviewPlaybackTransition(initialState.destination(), targetState.destination())) {
+                    SharedZAxisEnterTransition togetherWith SharedZAxisExitTransition
+                  } else {
+                    SharedXAxisEnterTransition(density) togetherWith SharedXAxisExitTransition(density)
+                  }
+                },
+                popTransitionSpec = {
                   SharedZAxisEnterTransition togetherWith SharedZAxisExitTransition
-                } else {
-                  SharedXAxisEnterTransition(density) togetherWith SharedXAxisExitTransition(density)
-                }
-              },
-              popTransitionSpec = {
-                SharedZAxisEnterTransition togetherWith SharedZAxisExitTransition
-              },
-              predictivePopTransitionSpec = {
-                SharedZAxisEnterTransition togetherWith SharedZAxisExitTransition
-              },
-              onBack = {
-                if (backStack.size > 1) {
-                  backStack.removeLastOrNull()
-                }
-              },
-              entryProvider = { key ->
-                navEntryResolver.create(key)
-              },
-            )
+                },
+                predictivePopTransitionSpec = {
+                  SharedZAxisEnterTransition togetherWith SharedZAxisExitTransition
+                },
+                onBack = {
+                  if (backStack.size > 1) {
+                    backStack.removeLastOrNull()
+                  } else if (backStack.last() != Destination.BookOverview && backStack.last() in readerTabs) {
+                    backStack[0] = Destination.BookOverview
+                  }
+                },
+                entryProvider = { key ->
+                  navEntryResolver.create(key)
+                },
+              )
+            }
           }
         }
 
@@ -156,6 +175,9 @@ class MainActivity : AppCompatActivity() {
               is NavigationCommand.GoTo -> {
                 when (val destination = command.destination) {
                   is Destination.Compose -> {
+                    if (destination in readerTabs) {
+                      backStack.clear()
+                    }
                     backStack += destination
                   }
                   is Destination.Activity -> {

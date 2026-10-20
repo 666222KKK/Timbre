@@ -26,7 +26,6 @@ import kotlin.time.Duration.Companion.seconds
 internal fun BookOverviewTopBar(
   viewState: BookOverviewViewState,
   onBookFolderClick: () -> Unit,
-  onSettingsClick: () -> Unit,
   onActiveChange: (Boolean) -> Unit,
   onQueryChange: (String) -> Unit,
   onSearchBookClick: (BookId) -> Unit,
@@ -42,7 +41,6 @@ internal fun BookOverviewTopBar(
       onQueryChange = onQueryChange,
       onActiveChange = onActiveChange,
       onBookFolderClick = onBookFolderClick,
-      onSettingsClick = onSettingsClick,
       onSearchBookClick = onSearchBookClick,
       onClearSearchHistory = onClearSearchHistory,
       searchActive = viewState.searchActive,
@@ -88,7 +86,6 @@ private fun BookOverviewTopBarPreview() {
         showFolderPickerIcon = true,
       ),
       onBookFolderClick = {},
-      onSettingsClick = {},
       onActiveChange = {},
       onQueryChange = {},
       onSearchBookClick = {},

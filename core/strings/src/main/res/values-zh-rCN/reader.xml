@@ -1,0 +1,5 @@
+<resources>
+  <string name="reader_shelf">书架</string>
+  <string name="backup_title">备份与恢复</string>
+  <string name="backup_summary">本地与 WebDAV：书架、进度、设置及书源</string>
+</resources>

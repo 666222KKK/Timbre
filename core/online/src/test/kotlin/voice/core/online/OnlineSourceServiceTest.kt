@@ -1,7 +1,9 @@
 package voice.core.online
 
 import androidx.datastore.core.DataStore
+import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +18,7 @@ import voice.core.common.DispatcherProvider
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -42,6 +45,50 @@ class OnlineSourceServiceTest {
     dispatcherProvider,
     emptySet(),
   )
+
+  @Test
+  fun `source failures are visible to discovery and cancellation propagates`() = runTest {
+    val client = mockk<OnlineSourceClient>()
+    val sourceService = OnlineSourceService(
+      FakeStore(true),
+      FakeStore("https://example.com"),
+      FakeStore("key"),
+      FakeStore("token"),
+      FakeBooksStore(),
+      chapterStore,
+      coverStore,
+      OkHttpClient(),
+      client,
+      dispatcherProvider,
+      emptySet(),
+    )
+    coEvery { client.interfaces(any(), any()) } throws IllegalStateException("unreachable")
+    assertEquals(emptyList(), sourceService.sources())
+    assertFailsWith<IllegalStateException> { sourceService.sources(reportServerErrors = true) }
+    coEvery { client.interfaces(any(), any()) } throws CancellationException("cancelled")
+    assertFailsWith<CancellationException> { sourceService.sources() }
+  }
+
+  @Test
+  fun `opening a discovery book restores its backend context`() = runTest {
+    val backend = FakeExtensionBackend()
+    val sourceService = OnlineSourceService(
+      FakeStore(false),
+      FakeStore(""),
+      FakeStore(""),
+      FakeStore(""),
+      FakeBooksStore(),
+      chapterStore,
+      coverStore,
+      OkHttpClient(),
+      mockk(),
+      dispatcherProvider,
+      setOf(backend),
+    )
+    val book = OnlineSearchResult(source = "jdr:demo", bookId = "b1", title = "书")
+    assertEquals(1, sourceService.chapters(book).size)
+    assertEquals(book, backend.preparedBook)
+  }
 
   @Test
   fun `re-adding keeps position skip settings and measured durations`() = runTest {
@@ -224,6 +271,12 @@ class OnlineSourceServiceTest {
   private class FakeExtensionBackend : ExtensionOnlineSource {
 
     var searched = false
+
+    var preparedBook: OnlineSearchResult? = null
+
+    override fun prepareBook(book: OnlineSearchResult) {
+      preparedBook = book
+    }
 
     override fun handles(source: String): Boolean = source.startsWith("jdr:")
 

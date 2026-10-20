@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -79,17 +80,22 @@ public class OnlineSourceService internal constructor(
     return extensionSources.firstOrNull { it.handles(source) }
   }
 
-  public suspend fun sources(): List<OnlineSourceInfo> {
+  public suspend fun sources(reportServerErrors: Boolean = false): List<OnlineSourceInfo> {
     // extension sources need no server: list them first, and never let a
     // server failure (or missing configuration) hide them
     val extensionInfos = extensionSources
       .filter { it.hasEnabledSources() }
       .flatMap { it.enabledSourceInfos() }
     val serverInfos = if (isServerConfigured()) {
-      runCatching {
+      try {
         val (base, _) = authed()
         withRelogin { client.interfaces(base, it) }
-      }.getOrDefault(emptyList())
+      } catch (e: CancellationException) {
+        throw e
+      } catch (e: Exception) {
+        if (reportServerErrors && extensionInfos.isEmpty()) throw e
+        emptyList()
+      }
     } else {
       emptyList()
     }
@@ -112,6 +118,27 @@ public class OnlineSourceService internal constructor(
     return withRelogin {
       client.searchSource(base, it, source, keyword)
     }
+  }
+
+  public suspend fun discoveryCategories(source: String): List<OnlineDiscoveryCategory> {
+    return extensionBackendFor(source)?.discoveryCategories(source) ?: OnlineDiscovery.searchCategories
+  }
+
+  public suspend fun discover(
+    source: String,
+    category: OnlineDiscoveryCategory,
+    page: Int,
+  ): OnlineDiscoveryPage {
+    require(page >= 1)
+    val backend = extensionBackendFor(source)
+    if (backend != null) return backend.discover(source, category, page)
+    if (page > 1) return OnlineDiscoveryPage(emptyList())
+    return OnlineDiscoveryPage(search(source, requireNotNull(category.keyword)))
+  }
+
+  public suspend fun chapters(book: OnlineSearchResult): List<OnlineChapter> {
+    extensionBackendFor(book.source)?.prepareBook(book)
+    return chapters(book.source, book.bookId)
   }
 
   public suspend fun chapters(

@@ -1,0 +1,10 @@
+<resources>
+  <string name="discovery_title">Discover</string>
+  <string name="discovery_manage_sources">Sources</string>
+  <string name="discovery_refresh">Refresh</string>
+  <string name="discovery_no_sources">No enabled sources. Import and enable a source, then return here.</string>
+  <string name="discovery_no_categories">This source has no discovery categories.</string>
+  <string name="discovery_keyword_hint">This source uses category keywords to search. These results are not a ranking.</string>
+  <string name="discovery_load_more">Load more</string>
+  <string name="discovery_end">All available results loaded</string>
+</resources>
