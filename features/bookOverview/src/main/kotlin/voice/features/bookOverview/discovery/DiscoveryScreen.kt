@@ -92,11 +92,6 @@ internal fun DiscoveryScreen() {
     topBar = {
       TopAppBar(
         title = { Text(stringResource(StringsR.string.discovery_title)) },
-        navigationIcon = {
-          IconButton(onClick = navigator::goBack) {
-            Icon(VoiceIcons.ArrowBack, stringResource(StringsR.string.common_action_close))
-          }
-        },
         actions = {
           TextButton(onClick = { navigator.goTo(Destination.ExtensionSources) }) {
             Text(stringResource(StringsR.string.discovery_manage_sources))

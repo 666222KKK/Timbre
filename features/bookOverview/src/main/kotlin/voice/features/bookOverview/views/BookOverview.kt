@@ -11,8 +11,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue.Expanded
 import androidx.compose.material3.SheetValue.Hidden
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
@@ -26,7 +24,6 @@ import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
@@ -47,7 +44,6 @@ import voice.features.bookOverview.bottomSheet.BottomSheetContent
 import voice.features.bookOverview.bottomSheet.BottomSheetItem
 import voice.features.bookOverview.deleteBook.DeleteBookDialog
 import voice.features.bookOverview.di.BookOverviewGraph
-import voice.features.bookOverview.discovery.DiscoveryGraph
 import voice.features.bookOverview.editTitle.EditBookTitleDialog
 import voice.features.bookOverview.onlineActions.OnlineCacheDialog
 import voice.features.bookOverview.onlineActions.OnlineRefreshDialog
@@ -60,7 +56,6 @@ import voice.features.bookOverview.views.topbar.BookOverviewTopBar
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
 import kotlin.uuid.Uuid
-import voice.core.strings.R as StringsR
 
 @ContributesTo(AppScope::class)
 interface BookOverviewProvider {
@@ -106,8 +101,6 @@ fun BookOverviewScreen(modifier: Modifier = Modifier) {
   var showBottomSheet by remember { mutableStateOf(false) }
   BookOverview(
     viewState = viewState,
-    onSettingsClick = bookOverviewViewModel::onSettingsClick,
-    onDiscoveryClick = { rootGraphAs<DiscoveryGraph>().navigator.goTo(Destination.Discovery) },
     onBookClick = bookOverviewViewModel::onBookClick,
     onBookLongClick = { bookId ->
       bottomSheetViewModel.bookSelected(bookId)
@@ -221,7 +214,6 @@ fun BookOverviewScreen(modifier: Modifier = Modifier) {
 @Composable
 internal fun BookOverview(
   viewState: BookOverviewViewState,
-  onSettingsClick: () -> Unit,
   onBookClick: (BookId) -> Unit,
   onBookLongClick: (BookId) -> Unit,
   onRetryImport: (BookId) -> Unit,
@@ -234,7 +226,6 @@ internal fun BookOverview(
   onClearSearchHistory: () -> Unit,
   onPermissionBugCardClick: () -> Unit,
   modifier: Modifier = Modifier,
-  onDiscoveryClick: () -> Unit = {},
 ) {
   val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
   Scaffold(
@@ -243,23 +234,13 @@ internal fun BookOverview(
       BookOverviewTopBar(
         viewState = viewState,
         onBookFolderClick = onBookFolderClick,
-        onSettingsClick = onSettingsClick,
         onActiveChange = onSearchActiveChange,
         onQueryChange = onSearchQueryChange,
         onSearchBookClick = onSearchBookClick,
         onClearSearchHistory = onClearSearchHistory,
       )
     },
-    bottomBar = {
-      if (!viewState.searchActive) {
-        TextButton(
-          onClick = onDiscoveryClick,
-          modifier = Modifier.navigationBarsPadding(),
-        ) {
-          Text(stringResource(StringsR.string.discovery_browse))
-        }
-      }
-    },
+
     floatingActionButton = {
       if (viewState.playButtonState != null) {
         PlayButton(
@@ -325,7 +306,6 @@ fun BookOverviewPreview(
   VoiceTheme {
     BookOverview(
       viewState = viewState,
-      onSettingsClick = {},
       onBookClick = {},
       onBookLongClick = {},
       onRetryImport = {},

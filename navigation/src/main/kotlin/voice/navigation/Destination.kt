@@ -124,4 +124,9 @@ sealed interface Destination {
   data object ExtensionSources : Compose {
     override val trackingName: String get() = "ExtensionSources"
   }
+
+  @Serializable
+  data object Backup : Compose {
+    override val trackingName: String get() = "Backup"
+  }
 }

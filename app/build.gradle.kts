@@ -146,7 +146,7 @@ tasks.matching { it.name in setOf("prePlayDebugBuild", "prePlayReleaseBuild") }.
 tasks.matching {
   val isPlayTask = it.name.contains("Play")
   !isPlayTask && (
-    it.name.startsWith("process") && it.name.endsWith("GoogleServices") ||
+    (it.name.startsWith("process") && it.name.endsWith("GoogleServices")) ||
       it.name.startsWith("injectCrashlytics")
     )
 }.configureEach {
@@ -164,6 +164,8 @@ dependencies {
   implementation(projects.core.featureflag)
   implementation(projects.core.initializer)
   implementation(projects.core.update)
+  implementation(projects.core.backup)
+  implementation(projects.features.backup)
   implementation(projects.features.playbackScreen)
   implementation(projects.navigation)
   implementation(projects.core.sleeptimer.api)

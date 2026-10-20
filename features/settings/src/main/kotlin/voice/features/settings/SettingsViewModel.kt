@@ -227,7 +227,7 @@ class SettingsViewModel(
   }
 
   override fun openProjectRepository() {
-    navigator.goTo(Destination.Website("https://github.com/cq10086123/Timbre"))
+    navigator.goTo(Destination.Website("https://github.com/666222KKK/Timbre"))
   }
 
   override fun openSourceShare() {
@@ -244,6 +244,10 @@ class SettingsViewModel(
 
   override fun openWebDav() {
     navigator.goTo(Destination.WebDavServers(Origin.Default))
+  }
+
+  override fun openBackup() {
+    navigator.goTo(Destination.Backup)
   }
 
   override fun openExtensions() {

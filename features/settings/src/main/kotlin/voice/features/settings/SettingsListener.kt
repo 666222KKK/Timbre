@@ -24,6 +24,7 @@ interface SettingsListener {
   fun toggleAnalytics()
   fun openFolderPicker()
   fun openWebDav()
+  fun openBackup()
   fun openExtensions()
   fun openSourceShare()
   fun setAutoRefreshWifi(checked: Boolean)
@@ -72,6 +73,7 @@ interface SettingsListener {
       override fun toggleAnalytics() {}
       override fun openFolderPicker() {}
       override fun openWebDav() {}
+      override fun openBackup() {}
       override fun openExtensions() {}
       override fun openSourceShare() {}
       override fun setAutoRefreshWifi(checked: Boolean) {}

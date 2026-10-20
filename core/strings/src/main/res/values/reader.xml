@@ -1,0 +1,5 @@
+<resources>
+  <string name="reader_shelf">Bookshelf</string>
+  <string name="backup_title">Backup and restore</string>
+  <string name="backup_summary">Local files and WebDAV; bookshelf, progress, settings and sources</string>
+</resources>

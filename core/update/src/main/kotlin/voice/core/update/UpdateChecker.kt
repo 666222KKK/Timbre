@@ -33,10 +33,10 @@ class UpdateChecker {
   // freshly published release and its body. Every endpoint is tried in order
   // and a failure or a timeout of one is silently ignored.
   private val endpoints = listOf(
-    "https://raw.githubusercontent.com/cq10086123/Timbre/main/update.json",
-    "https://cdn.jsdelivr.net/gh/cq10086123/Timbre@main/update.json",
-    "https://fastly.jsdelivr.net/gh/cq10086123/Timbre@main/update.json",
-    "https://api.github.com/repos/cq10086123/Timbre/releases/latest",
+    "https://raw.githubusercontent.com/666222KKK/Timbre/main/update.json",
+    "https://cdn.jsdelivr.net/gh/666222KKK/Timbre@main/update.json",
+    "https://fastly.jsdelivr.net/gh/666222KKK/Timbre@main/update.json",
+    "https://api.github.com/repos/666222KKK/Timbre/releases/latest",
   )
 
   /**
