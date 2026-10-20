@@ -50,7 +50,11 @@ class ExtensionSourceBackendTest {
     val manager = mockk<ExtensionManager>()
     coEvery { manager.installed() } returns listOf(pkg)
     coEvery { manager.packageFor(any()) } returns pkg
-    return ExtensionSourceBackend(engineProvider, manager)
+    val sessions = mockk<ExtensionWebSessions>()
+    coEvery { sessions.media(any(), any(), any(), any()) } coAnswers {
+      voice.core.online.ResolvedStream(thirdArg(), arg(3))
+    }
+    return ExtensionSourceBackend(engineProvider, manager, sessions)
   }
 
   @Test

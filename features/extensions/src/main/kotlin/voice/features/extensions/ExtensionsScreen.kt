@@ -26,8 +26,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.retain.retain
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -37,6 +41,7 @@ import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
 import voice.core.common.rootGraphAs
+import voice.core.extension.ExtensionWebSessions
 import voice.core.ui.icons.VoiceIcons
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
@@ -68,10 +73,15 @@ fun ExtensionsScreen(origin: Origin) {
       .create(origin)
   }
   val viewState = viewModel.viewState()
+  var verifyingId by rememberSaveable { mutableStateOf<String?>(null) }
   ExtensionsView(
     viewState = viewState,
     listener = viewModel,
+    onVerify = { verifyingId = it.manifestId },
   )
+  viewState.packages.firstOrNull { it.manifestId == verifyingId }?.let { pkg ->
+    ExtensionWebVerificationDialog(pkg, onDismiss = { verifyingId = null })
+  }
   if (viewState.showUrlDialog) {
     ExtensionsUrlDialog(viewState = viewState, listener = viewModel)
   }
@@ -84,6 +94,7 @@ fun ExtensionsScreen(origin: Origin) {
 private fun ExtensionsView(
   viewState: ExtensionsViewState,
   listener: ExtensionsViewModel,
+  onVerify: (ExtensionPackageUi) -> Unit,
 ) {
   val snackbarHostState = remember { SnackbarHostState() }
   val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -144,6 +155,9 @@ private fun ExtensionsView(
               Text(stringResource(StringsR.string.extensions_package_version, pkg.version))
               if (pkg.author.isNotBlank()) {
                 Text(stringResource(StringsR.string.extensions_package_author, pkg.author))
+              }
+              if (!pkg.allowInsecure && ExtensionWebSessions.origin(pkg.homepage) != null) {
+                TextButton(onClick = { onVerify(pkg) }) { Text("网站验证 / 更新会话") }
               }
             }
           },

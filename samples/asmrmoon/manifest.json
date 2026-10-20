@@ -1,0 +1,15 @@
+{
+  "id": "com.timbre.asmrmoon",
+  "name": "ASMR MOON",
+  "version": "1.0.0",
+  "author": "666222KKK",
+  "description": "ASMR MOON 公开目录：搜索、递归音频目录和发现。遇到月盾时在接口源页完成网站验证。",
+  "homepage": "https://asmrmoon.com/",
+  "allowInsecure": false,
+  "sources": [{
+    "id": "asmrmoon",
+    "name": "ASMR MOON",
+    "script": "asmrmoon.js",
+    "capabilities": ["search", "chapters", "audio"]
+  }]
+}

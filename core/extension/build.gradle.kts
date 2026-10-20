@@ -13,6 +13,7 @@ dependencies {
   implementation(projects.core.common)
   implementation(projects.core.online)
   implementation(projects.core.initializer)
+  implementation(projects.core.webdav)
 
   implementation(libs.okhttp)
   implementation(libs.serialization.json)

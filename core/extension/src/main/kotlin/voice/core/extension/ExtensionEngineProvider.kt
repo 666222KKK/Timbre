@@ -29,7 +29,10 @@ import javax.net.ssl.X509TrustManager
  */
 @Inject
 @SingleIn(AppScope::class)
-public class ExtensionEngineProvider(private val manager: ExtensionManager) {
+public class ExtensionEngineProvider(
+  private val manager: ExtensionManager,
+  private val webSessions: ExtensionWebSessions,
+) {
 
   private val mutex = Mutex()
   private val engines = HashMap<String, CachedEngine>()
@@ -70,7 +73,15 @@ public class ExtensionEngineProvider(private val manager: ExtensionManager) {
       sourceId = sourceId,
       script = script,
       scriptName = meta.script,
-      http = OkHttpSandboxHttp(if (pkg.manifest.allowInsecure) insecureClient else secureClient),
+      http = OkHttpSandboxHttp(
+        if (pkg.manifest.allowInsecure) {
+          insecureClient
+        } else {
+          secureClient.newBuilder()
+            .addNetworkInterceptor(ExtensionSessionInterceptor(webSessions, pkg.manifest.id, pkg.installedAtMillis))
+            .build()
+        },
+      ),
       log = { line -> Logger.i("[$SOURCE_PREFIX$sourceId] $line") },
     )
   }

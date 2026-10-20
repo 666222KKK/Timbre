@@ -6,6 +6,7 @@ import com.dokar.quickjs.binding.asyncFunction
 import com.dokar.quickjs.binding.function
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
@@ -157,6 +158,10 @@ public class JsSourceEngine private constructor(
       quickJs.function("__log") { args -> log(args.string(0)) }
       quickJs.asyncFunction("__httpRequest") { args ->
         http.request(args.string(0), args.string(1), args.string(2))
+      }
+      quickJs.asyncFunction("__sleep") { args ->
+        delay(args.int(0).coerceIn(0, 30_000).toLong())
+        ""
       }
     }
 

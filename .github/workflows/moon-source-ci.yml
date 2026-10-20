@@ -1,0 +1,44 @@
+name: Moon source verification and Release APK
+on:
+  push:
+    branches: [feature/moon-source]
+permissions:
+  contents: read
+concurrency:
+  group: moon-source-verify-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/build_setup
+      - name: Source contract and package
+        run: |
+          node scripts/test_asmrmoon.mjs
+          python scripts/pack_jdr.py samples/asmrmoon asmrmoon-1.0.0.jdr
+      - name: Focused tests
+        run: ./gradlew :core:extension-engine:test :core:extension:testDebugUnitTest :app:testFreeDebugUnitTest --max-workers=2
+      - name: All tests
+        run: ./gradlew voiceUnitTest --max-workers=2
+      - name: Formatting and Android lint
+        run: ./gradlew lintKotlin :app:lintFreeDebug --continue --max-workers=2
+      - name: Optimized Release build
+        run: ./gradlew :app:assembleFreeRelease -Pvoice.applicationId=app.timbre.audiobook.reader -Pvoice.versionName=3.6.2.2 -Pvoice.versionCode=634
+      - uses: actions/upload-artifact@v7
+        with:
+          name: moon-source-release-unsigned
+          path: |
+            app/build/outputs/apk/free/release/*.apk
+            asmrmoon-1.0.0.jdr
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: moon-source-test-reports
+          path: |
+            **/build/test-results/**/*.xml
+            **/build/reports/tests/**
+            app/build/reports/lint-results*
+          if-no-files-found: ignore

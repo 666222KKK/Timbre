@@ -33,6 +33,9 @@ data class ExtensionPackageUi(
   val author: String,
   val description: String,
   val sources: List<ExtensionSourceUi>,
+  val homepage: String = "",
+  val installedAtMillis: Long = 0,
+  val allowInsecure: Boolean = false,
 )
 
 data class ExtensionsViewState(
@@ -180,6 +183,9 @@ class ExtensionsViewModel(
     version = manifest.version,
     author = manifest.author,
     description = manifest.description,
+    homepage = manifest.homepage,
+    installedAtMillis = installedAtMillis,
+    allowInsecure = manifest.allowInsecure,
     sources = manifest.sources.map { meta ->
       ExtensionSourceUi(
         sourceId = meta.id,
