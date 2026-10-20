@@ -1,0 +1,17 @@
+name: Source snapshot
+on:
+  push:
+    branches: [ feature/reader-362 ]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: git archive --format=zip --output=source-snapshot.zip HEAD
+      - uses: actions/upload-artifact@v7
+        with:
+          name: source-snapshot
+          path: source-snapshot.zip
+          retention-days: 1
