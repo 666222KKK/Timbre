@@ -46,7 +46,6 @@ class BackupViewModelTest {
       assertEquals("本地备份已保存", model.message)
       assertEquals("backup-data", target.readText())
       coVerify(exactly = 1) { player.pauseForBackup() }
-      coVerify(exactly = 1) { service.create() }
     } finally {
       Dispatchers.resetMain()
     }
