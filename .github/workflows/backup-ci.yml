@@ -1,7 +1,7 @@
 name: Backup verification and Release APK
 on:
   push:
-    branches: [feature/backup-separation]
+    branches: [feature/passwordless-backup]
 permissions:
   contents: read
 concurrency:
@@ -25,7 +25,7 @@ jobs:
       - name: Formatting and Android lint
         run: ./gradlew lintKotlin :app:lintFreeDebug --continue --max-workers=2
       - name: Optimized Release build
-        run: ./gradlew :app:assembleFreeRelease -Pvoice.applicationId=app.timbre.audiobook.reader -Pvoice.versionName=3.6.2.3 -Pvoice.versionCode=635
+        run: ./gradlew :app:assembleFreeRelease -Pvoice.applicationId=app.timbre.audiobook.reader -Pvoice.versionName=3.6.2.4 -Pvoice.versionCode=636
       - uses: actions/upload-artifact@v7
         with:
           name: backup-release-unsigned

@@ -18,6 +18,7 @@ import voice.core.backup.BackupConnectionStore
 import voice.core.backup.BackupContents
 import voice.core.backup.BackupService
 import voice.core.backup.BackupWebDav
+import voice.core.backup.LegacyBackupPasswordRequired
 import voice.core.playback.PlayerController
 import voice.core.webdav.WebDavResource
 import java.io.ByteArrayOutputStream
@@ -35,8 +36,10 @@ class BackupViewModel(
 ) {
   private val scope = MainScope()
   private val saved = runCatching { connectionStore.read() }.getOrNull()
-  var password by mutableStateOf("")
-  var confirmation by mutableStateOf("")
+  var legacyPassword by mutableStateOf("")
+  var needsLegacyPassword by mutableStateOf(false)
+    private set
+  private var legacyBytes: ByteArray? = null
   var serverUrl by mutableStateOf(saved?.server?.baseUrl ?: "https://dav.jianguoyun.com/dav/")
   var username by mutableStateOf(saved?.server?.username.orEmpty())
   var applicationPassword by mutableStateOf(saved?.let { runCatching { connectionStore.password(it) }.getOrNull() }.orEmpty())
@@ -58,9 +61,8 @@ class BackupViewModel(
     "timbre-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))}-${UUID.randomUUID().toString().take(6)}.tbk"
 
   fun createLocal(uri: Uri) = run {
-    checkPassword()
     player.pauseForBackup()
-    val data = withContext(Dispatchers.IO) { service.create(password.toCharArray()) }
+    val data = withContext(Dispatchers.IO) { service.create() }
     withContext(Dispatchers.IO) {
       requireNotNull(application.contentResolver.openOutputStream(uri, "wt")).use { it.write(data) }
     }
@@ -81,14 +83,13 @@ class BackupViewModel(
         output.toByteArray()
       }
     }
-    preview = service.inspect(bytes, password.toCharArray())
+    inspect(bytes)
   }
 
   fun upload() = run {
-    checkPassword()
     val connection = saveConnection()
     player.pauseForBackup()
-    val bytes = service.create(password.toCharArray())
+    val bytes = service.create()
     val filename = name()
     remote.upload(connection.server, applicationPassword, connection.directory, filename, bytes)
     remoteStatus = "备份成功并已核对：${connection.directory}/$filename"
@@ -101,10 +102,9 @@ class BackupViewModel(
   }
 
   fun inspectRemote(file: WebDavResource) = run {
-    require(password.isNotEmpty()) { "请先输入该备份文件的密码，再选择要恢复的文件" }
     val connection = saveConnection()
     val bytes = remote.download(connection.server, applicationPassword, connection.directory, file.url)
-    preview = service.inspect(bytes, password.toCharArray())
+    inspect(bytes)
     remoteFiles = null
   }
 
@@ -113,8 +113,7 @@ class BackupViewModel(
     player.pauseForBackup()
     service.stage(contents)
     preview = null
-    password = ""
-    confirmation = ""
+    dismissLegacyPassword()
     restartRequired = true
     message = "恢复数据已校验并准备完成，请重启应用"
   }
@@ -129,23 +128,26 @@ class BackupViewModel(
     message = null
   }
 
-  private fun checkPassword() {
-    require(password.length >= 8) { "请设置至少 8 位的备份密码" }
-    require(password == confirmation) { "两次输入的备份密码不一致" }
+  private suspend fun inspect(bytes: ByteArray) {
+    try {
+      preview = service.inspect(bytes)
+    } catch (_: LegacyBackupPasswordRequired) {
+      legacyBytes = bytes
+      legacyPassword = ""
+      needsLegacyPassword = true
+    }
   }
 
-  fun validateCreate(): Boolean = try {
-    checkPassword()
-    true
-  } catch (e: IllegalArgumentException) {
-    message = e.message
-    false
+  fun restoreLegacy() = run {
+    require(legacyPassword.isNotEmpty()) { "请输入旧备份的原密码" }
+    preview = service.inspect(requireNotNull(legacyBytes), legacyPassword.toCharArray())
+    dismissLegacyPassword()
   }
 
-  fun validateRestore(): Boolean {
-    if (password.isNotEmpty()) return true
-    message = "请先输入备份文件的密码"
-    return false
+  fun dismissLegacyPassword() {
+    needsLegacyPassword = false
+    legacyBytes = null
+    legacyPassword = ""
   }
 
   fun testConnection() = run {

@@ -99,36 +99,18 @@ private fun BackupScreen() {
       item {
         Column(Modifier.padding(horizontal = 16.dp)) {
           Text("备份书架/播放列表、播放进度、书签、设置、已导入接口源与 WebDAV 配置。不包含音频和缓存。")
-          Text("备份使用密码加密，包含服务器凭据。请妥善保存密码；遗忘后无法恢复。", style = MaterialTheme.typography.bodySmall)
-          OutlinedTextField(
-            value = model.password,
-            onValueChange = { model.password = it },
-            label = { Text("备份文件密码（至少 8 位；恢复时输入原密码）") },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !model.busy && !model.restartRequired,
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-          )
-          OutlinedTextField(
-            value = model.confirmation,
-            onValueChange = { model.confirmation = it },
-            label = { Text("创建备份时再次确认密码") },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !model.busy && !model.restartRequired,
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-          )
+          Text("备份和恢复无需文件密码，备份包含账号配置，请妥善保存文件。", style = MaterialTheme.typography.bodySmall)
           if (model.busy) CircularProgressIndicator(Modifier.padding(16.dp))
           Row {
             TextButton(
-              onClick = { if (model.validateCreate()) create.launch(model.name()) },
+              onClick = { create.launch(model.name()) },
               enabled =
               !model.busy && !model.restartRequired,
             ) {
               Text("本地备份")
             }
             TextButton(
-              onClick = { if (model.validateRestore()) open.launch(arrayOf("*/*")) },
+              onClick = { open.launch(arrayOf("*/*")) },
               enabled =
               !model.busy && !model.restartRequired,
             ) {
@@ -137,7 +119,7 @@ private fun BackupScreen() {
           }
           Text("WebDAV 数据备份", style = MaterialTheme.typography.titleMedium)
           Text("独立于 WebDAV 音频播放。请在此配置备份账号，备份按时间保存在指定目录，可选择历史文件恢复。")
-          Text("坚果云：账号填写邮箱，应用密码填写安全选项中生成的第三方应用密码。上方备份文件密码用于加密文件，两者用途不同。", style = MaterialTheme.typography.bodySmall)
+          Text("坚果云：账号填写邮箱，应用密码填写安全选项中生成的第三方应用密码。此密码仅用于登录坚果云。", style = MaterialTheme.typography.bodySmall)
           OutlinedTextField(
             value = model.serverUrl,
             onValueChange = { model.serverUrl = it },
@@ -175,7 +157,7 @@ private fun BackupScreen() {
             Text("保存并测试备份连接")
           }
           model.remoteStatus?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-          Text("创建备份需填写并确认至少 8 位的备份文件密码；测试连接不会创建正式备份。", style = MaterialTheme.typography.bodySmall)
+          Text("测试连接不会创建正式备份，点击“备份到 WebDAV”保存当前数据。", style = MaterialTheme.typography.bodySmall)
           Row {
             TextButton(
               onClick = model::upload,
@@ -213,14 +195,6 @@ private fun BackupScreen() {
       title = { Text("选择远程备份") },
       text = {
         Column {
-          OutlinedTextField(
-            value = model.password,
-            onValueChange = { model.password = it },
-            label = { Text("所选备份文件的密码") },
-            enabled = !model.busy,
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-          )
           LazyColumn {
             if (files.isEmpty()) item { Text("此目录没有备份文件") }
             items(files, key = { it.url }) { file ->
@@ -230,6 +204,27 @@ private fun BackupScreen() {
         }
       },
       confirmButton = { TextButton(onClick = model::dismissRemote) { Text("关闭") } },
+    )
+  }
+  if (model.needsLegacyPassword) {
+    AlertDialog(
+      onDismissRequest = model::dismissLegacyPassword,
+      title = { Text("恢复旧版加密备份") },
+      text = {
+        Column {
+          Text("此文件由旧版加密，需要原密码。新版创建的备份无需密码。")
+          OutlinedTextField(
+            value = model.legacyPassword,
+            onValueChange = { model.legacyPassword = it },
+            label = { Text("旧备份原密码") },
+            enabled = !model.busy,
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+          )
+        }
+      },
+      confirmButton = { TextButton(onClick = model::restoreLegacy, enabled = !model.busy) { Text("继续恢复") } },
+      dismissButton = { TextButton(onClick = model::dismissLegacyPassword, enabled = !model.busy) { Text("取消") } },
     )
   }
   if (model.restartRequired) {
