@@ -1,0 +1,15 @@
+{
+  "id": "com.timbre.publicpodcasts",
+  "name": "公开播客",
+  "version": "1.0.0",
+  "author": "666222KKK",
+  "description": "搜索公开播客、浏览地区与分类榜单，通过节目 RSS 播放完整公开单集。支持直接输入 RSS 地址。",
+  "homepage": "https://podcasts.apple.com/",
+  "allowInsecure": false,
+  "sources": [{
+    "id": "public-podcasts",
+    "name": "公开播客",
+    "script": "podcasts.js",
+    "capabilities": ["search", "chapters", "audio"]
+  }]
+}
