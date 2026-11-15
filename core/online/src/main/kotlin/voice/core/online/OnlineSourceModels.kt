@@ -34,6 +34,15 @@ public data class OnlineChapter(
   val order: Int = 0,
 )
 
+/**
+ * The newest playback position kept in memory by the catalog, ahead of the
+ * throttled persistence. Read by surfaces that poll (the home screen widget).
+ */
+public data class OnlineLivePosition(
+  val chapterId: String,
+  val positionMs: Long,
+)
+
 /** One recommendation slot rendered on the discover page. */
 @Serializable
 public data class OnlineRecommendGroup(

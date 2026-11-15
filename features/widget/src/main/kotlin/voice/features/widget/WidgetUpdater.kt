@@ -1,10 +1,16 @@
 package voice.features.widget
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
-import android.content.res.Configuration
-import android.os.Bundle
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Shader
 import android.view.View
 import android.widget.RemoteViews
 import androidx.core.graphics.drawable.toBitmap
@@ -18,15 +24,23 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import voice.app.features.widget.BaseWidgetProvider
 import voice.core.data.Book
 import voice.core.data.BookId
 import voice.core.data.repo.BookRepository
 import voice.core.data.store.CurrentBookStore
+import voice.core.online.OnlineBook
+import voice.core.online.OnlineChapterStore
+import voice.core.online.OnlinePlaybackCatalog
+import voice.core.online.OnlineSourceBooksStore
+import voice.core.online.OnlineUri
 import voice.core.playback.notification.MainActivityIntentProvider
 import voice.core.playback.playstate.PlayStateManager
 import voice.core.playback.receiver.WidgetButtonReceiver
 import voice.core.ui.dpToPxRounded
+import voice.core.strings.R as StringsR
 import voice.core.ui.R as UiR
 
 @SingleIn(AppScope::class)
@@ -36,6 +50,10 @@ class WidgetUpdater(
   private val repo: BookRepository,
   @CurrentBookStore
   private val currentBookStore: DataStore<BookId?>,
+  @OnlineSourceBooksStore
+  private val onlineBooksStore: DataStore<List<OnlineBook>>,
+  private val onlineChapterStore: OnlineChapterStore,
+  private val onlinePlaybackCatalog: OnlinePlaybackCatalog,
   private val playStateManager: PlayStateManager,
   private val mainActivityIntentProvider: MainActivityIntentProvider,
 ) {
@@ -44,87 +62,124 @@ class WidgetUpdater(
 
   private val scope = CoroutineScope(Dispatchers.IO)
 
+  /** Ticker and state changes can overlap; serialize RemoteViews assembly. */
+  private val updateMutex = Mutex()
+
+  private var cachedCoverFile: java.io.File? = null
+  private var cachedCoverBitmap: Bitmap? = null
+  private var cachedBackdrop: Bitmap? = null
+
+  /** Everything the card renders, resolved once per update. */
+  private data class WidgetContent(
+    val book: Book,
+    val chapterTitle: String,
+    val positionMs: Long,
+    val durationMs: Long,
+  )
+
   fun update() {
     scope.launch {
-      val book = currentBookStore.data.first()?.let {
-        repo.get(it)
-      }
-      val componentName = ComponentName(this@WidgetUpdater.context, BaseWidgetProvider::class.java)
-      val ids = appWidgetManager.getAppWidgetIds(componentName)
+      updateMutex.withLock {
+        val content = currentBookStore.data.first()?.let { loadContent(it) }
+        val componentName = ComponentName(this@WidgetUpdater.context, BaseWidgetProvider::class.java)
+        val ids = appWidgetManager.getAppWidgetIds(componentName)
 
-      for (widgetId in ids) {
-        updateWidgetForId(book, widgetId)
+        for (widgetId in ids) {
+          updateWidgetForId(content, widgetId)
+        }
       }
     }
   }
 
+  /**
+   * Online books never enter the local repository, so looking them up there
+   * made the widget fall back to the "nothing playing" state even while they
+   * were playing. Resolve them from the shelf store and pull the chapter title
+   * and length from the chapter cache.
+   */
+  private suspend fun loadContent(id: BookId): WidgetContent? {
+    repo.get(id)?.let { book ->
+      return WidgetContent(
+        book = book,
+        chapterTitle = book.currentChapter.name.orEmpty(),
+        positionMs = book.content.positionInChapter,
+        durationMs = book.currentChapter.duration,
+      )
+    }
+    val ref = OnlineUri.parseBookUri(id.value) ?: return null
+    val online = onlineBooksStore.data.first()
+      .firstOrNull { it.source == ref.source && it.bookId == ref.bookId }
+      ?: return null
+    val book = onlinePlaybackCatalog.localBook(online)
+    // The live position in memory is ahead of the throttled persistence and
+    // is what makes the progress bar actually move while playing.
+    val live = onlinePlaybackCatalog.livePosition(online.key)
+    val currentChapterId = live?.chapterId ?: online.currentChapterId
+    val current = onlineChapterStore.chapters(online.key)
+      .firstOrNull { it.id == currentChapterId }
+    return WidgetContent(
+      book = book,
+      chapterTitle = current?.title?.takeIf { it.isNotBlank() } ?: book.currentChapter.name.orEmpty(),
+      positionMs = live?.positionMs ?: online.positionMs,
+      durationMs = current?.durationSeconds?.takeIf { it > 0 }?.times(1_000L)
+        ?: book.currentChapter.duration,
+    )
+  }
+
   private suspend fun updateWidgetForId(
-    book: Book?,
+    content: WidgetContent?,
     widgetId: Int,
   ) {
-    if (book != null) {
-      initWidgetForPresentBook(widgetId, book)
+    val opts = appWidgetManager.getAppWidgetOptions(widgetId)
+    val minHeightDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
+    val compact = minHeightDp > 0 && minHeightDp < 62
+    if (content != null) {
+      initWidgetForPresentBook(widgetId, content, compact)
     } else {
-      initWidgetForAbsentBook(widgetId)
+      initWidgetForAbsentBook(widgetId, compact)
     }
   }
 
   private suspend fun initWidgetForPresentBook(
     widgetId: Int,
-    book: Book,
+    content: WidgetContent,
+    compact: Boolean,
   ) {
-    val opts = appWidgetManager.getAppWidgetOptions(widgetId)
-    val useWidth = widgetWidth(opts)
-    val useHeight = widgetHeight(opts)
+    val layoutId = if (compact) R.layout.widget_compact else R.layout.widget
+    val remoteViews = RemoteViews(context.packageName, layoutId)
+    initElements(remoteViews = remoteViews, content = content, compact = compact)
 
-    val remoteViews = RemoteViews(context.packageName, R.layout.widget)
-    initElements(remoteViews = remoteViews, book = book, coverSize = useHeight)
-
-    if (useWidth > 0 && useHeight > 0) {
-      setVisibilities(remoteViews, useWidth, useHeight, book.content.chapters.size == 1)
-    }
     appWidgetManager.updateAppWidget(widgetId, remoteViews)
   }
 
-  private fun widgetWidth(opts: Bundle): Int {
-    val key = if (isPortrait) {
-      AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH
-    } else {
-      AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH
-    }
-    val dp = opts.getInt(key)
-    return context.dpToPxRounded(dp.toFloat())
-  }
-
-  private fun widgetHeight(opts: Bundle): Int {
-    val key = if (isPortrait) {
-      AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT
-    } else {
-      AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT
-    }
-    val dp = opts.getInt(key)
-    return context.dpToPxRounded(dp.toFloat())
-  }
-
-  private fun initWidgetForAbsentBook(widgetId: Int) {
-    val remoteViews = RemoteViews(context.packageName, R.layout.widget)
+  private fun initWidgetForAbsentBook(
+    widgetId: Int,
+    compact: Boolean,
+  ) {
+    val layoutId = if (compact) R.layout.widget_compact else R.layout.widget
+    val remoteViews = RemoteViews(context.packageName, layoutId)
     val wholeWidgetClickPI = mainActivityIntentProvider.toCurrentBook()
     remoteViews.setImageViewResource(R.id.imageView, UiR.drawable.album_art)
+    // With no book the transport buttons have nothing to control, and leaving
+    // the two text views empty made the widget look broken.
+    remoteViews.setTextViewText(R.id.title, context.getString(StringsR.string.widget_empty_title))
+    remoteViews.setViewVisibility(R.id.summary, View.GONE)
+    remoteViews.setViewVisibility(R.id.rewind, View.GONE)
+    remoteViews.setViewVisibility(R.id.playPause, View.GONE)
+    remoteViews.setViewVisibility(R.id.fastForward, View.GONE)
+    remoteViews.setViewVisibility(R.id.progress, View.GONE)
+    remoteViews.setViewVisibility(R.id.elapsed, View.GONE)
+    remoteViews.setViewVisibility(R.id.total, View.GONE)
     remoteViews.setOnClickPendingIntent(R.id.wholeWidget, wholeWidgetClickPI)
     appWidgetManager.updateAppWidget(widgetId, remoteViews)
   }
 
-  private val isPortrait: Boolean
-    get() {
-      val orientation = context.resources.configuration.orientation
-      return orientation == Configuration.ORIENTATION_PORTRAIT
-    }
-
   private suspend fun initElements(
     remoteViews: RemoteViews,
-    book: Book,
-    coverSize: Int,
+    content: WidgetContent,
+    compact: Boolean,
   ) {
+    val book = content.book
     val playPausePI = WidgetButtonReceiver.pendingIntent(context, WidgetButtonReceiver.Action.PlayPause)
     remoteViews.setOnClickPendingIntent(R.id.playPause, playPausePI)
 
@@ -135,37 +190,64 @@ class WidgetUpdater(
     remoteViews.setOnClickPendingIntent(R.id.rewind, rewindPI)
 
     val playIcon = if (playStateManager.playState == PlayStateManager.PlayState.Playing) {
-      UiR.drawable.ic_pause_white_36dp
+      R.drawable.widget_pause
     } else {
-      UiR.drawable.ic_play_white_36dp
+      R.drawable.widget_play
     }
     remoteViews.setImageViewResource(R.id.playPause, playIcon)
 
-    // if we have any book, init the views and have a click on the whole widget start BookPlay.
-    // if we have no book, simply have a click on the whole widget start BookChoose.
     remoteViews.setTextViewText(R.id.title, book.content.name)
-    val name = book.currentChapter.name
 
-    remoteViews.setTextViewText(R.id.summary, name)
+    // A source without a chapter list yields a single placeholder chapter
+    // titled after the book; repeating the title in the subtitle looks broken.
+    if (compact) {
+      val duration = content.durationMs.coerceAtLeast(0L)
+      val position = content.positionMs.coerceIn(0L, duration.coerceAtLeast(0L))
+      val progress = if (duration > 0) ((position * 1000) / duration).toInt().coerceIn(0, 1000) else 0
+      remoteViews.setProgressBar(R.id.progress, 1000, progress, false)
+    } else {
+      val chapter = content.chapterTitle
+      if (chapter.isNotBlank() && chapter != book.content.name) {
+        remoteViews.setTextViewText(R.id.summary, chapter)
+        remoteViews.setViewVisibility(R.id.summary, View.VISIBLE)
+      } else {
+        remoteViews.setViewVisibility(R.id.summary, View.GONE)
+      }
 
-    val wholeWidgetClickPI = mainActivityIntentProvider.toCurrentBook()
+      val duration = content.durationMs.coerceAtLeast(0L)
+      val position = content.positionMs.coerceIn(0L, duration.coerceAtLeast(0L))
+      val progress = if (duration > 0) ((position * 1000) / duration).toInt().coerceIn(0, 1000) else 0
+      remoteViews.setProgressBar(R.id.progress, 1000, progress, false)
+      remoteViews.setTextViewText(R.id.elapsed, formatTime(position))
+      remoteViews.setTextViewText(R.id.total, formatTime(duration))
+    }
 
     val coverFile = book.content.cover
-    // a null drawable means even the fallback failed to decode: fall back to
-    // the static resource instead of crashing the whole widget update
-    val bitmap = coverFile?.takeIf { coverSize > 0 }?.let { cover ->
-      context.imageLoader
-        .execute(
-          ImageRequest.Builder(context)
-            .data(cover)
-            .size(coverSize, coverSize)
-            .fallback(UiR.drawable.album_art)
-            .error(UiR.drawable.album_art)
-            .allowHardware(false)
-            .build(),
-        )
-        .drawable
-        ?.toBitmap()
+    val coverSize = context.dpToPxRounded(COVER_SIZE_DP)
+    // The ticker rebuilds the card every 2s while playing; reusing the decoded
+    // cover keeps that cadence from becoming a decode loop.
+    val bitmap = if (coverFile != null && coverFile == cachedCoverFile && cachedCoverBitmap != null) {
+      cachedCoverBitmap
+    } else {
+      // a null drawable means even the fallback failed to decode: fall back to
+      // the static resource instead of crashing the whole widget update
+      coverFile?.takeIf { coverSize > 0 }?.let { cover ->
+        context.imageLoader
+          .execute(
+            ImageRequest.Builder(context)
+              .data(cover)
+              .size(coverSize, coverSize)
+              .fallback(UiR.drawable.album_art)
+              .error(UiR.drawable.album_art)
+              .allowHardware(false)
+              .build(),
+          )
+          .drawable
+          ?.toBitmap()
+      }?.also {
+        cachedCoverBitmap = it
+        cachedCoverFile = coverFile
+      }
     }
     if (bitmap != null) {
       remoteViews.setImageViewBitmap(R.id.imageView, bitmap)
@@ -173,75 +255,71 @@ class WidgetUpdater(
       remoteViews.setImageViewResource(R.id.imageView, UiR.drawable.album_art)
     }
 
-    remoteViews.setOnClickPendingIntent(R.id.wholeWidget, wholeWidgetClickPI)
-  }
+    // Some launchers (Mi Home among them) paint an opaque plate behind the
+    // widget and swallow the alpha written into the shape drawable, so the
+    // gradient is delivered as a bitmap the launcher cannot restyle.
+    val backdrop = cachedBackdrop ?: gradientBackdrop().also { cachedBackdrop = it }
+    remoteViews.setImageViewBitmap(R.id.backdrop, backdrop)
 
-  private fun setVisibilities(
-    remoteViews: RemoteViews,
-    width: Int,
-    height: Int,
-    singleChapter: Boolean,
-  ) {
-    setHorizontalVisibility(remoteViews, width, height)
-    setVerticalVisibility(remoteViews, height, singleChapter)
-  }
-
-  private fun setHorizontalVisibility(
-    remoteViews: RemoteViews,
-    widgetWidth: Int,
-    coverSize: Int,
-  ) {
-    val singleButtonSize = context.dpToPxRounded(8F + 36F + 8F)
-    // widget height because cover is square
-    var summarizedItemWidth = 3 * singleButtonSize + coverSize
-
-    // set all views visible
-    remoteViews.setViewVisibility(R.id.imageView, View.VISIBLE)
-    remoteViews.setViewVisibility(R.id.rewind, View.VISIBLE)
-    remoteViews.setViewVisibility(R.id.fastForward, View.VISIBLE)
-
-    // hide cover if we need space
-    if (summarizedItemWidth > widgetWidth) {
-      remoteViews.setViewVisibility(R.id.imageView, View.GONE)
-      summarizedItemWidth -= coverSize
-    }
-
-    // hide fast forward if we need space
-    if (summarizedItemWidth > widgetWidth) {
-      remoteViews.setViewVisibility(R.id.fastForward, View.GONE)
-      summarizedItemWidth -= singleButtonSize
-    }
-
-    // hide rewind if we need space
-    if (summarizedItemWidth > widgetWidth) {
-      remoteViews.setViewVisibility(R.id.rewind, View.GONE)
-    }
-  }
-
-  private fun setVerticalVisibility(
-    remoteViews: RemoteViews,
-    widgetHeight: Int,
-    singleChapter: Boolean,
-  ) {
-    val buttonSize = context.dpToPxRounded(8F + 36F + 8F)
-    val titleSize = context.resources.getDimensionPixelSize(R.dimen.list_text_primary_size)
-    val summarySize = context.resources.getDimensionPixelSize(R.dimen.list_text_secondary_size)
-
-    var summarizedItemsHeight = buttonSize + titleSize + summarySize
-
-    // first setting all views visible
-    remoteViews.setViewVisibility(R.id.summary, View.VISIBLE)
-    remoteViews.setViewVisibility(R.id.title, View.VISIBLE)
-
-    // when we are in a single chapter or we are to high, hide summary
-    if (singleChapter || widgetHeight < summarizedItemsHeight) {
+    if (compact) {
+      // One-row placement keeps the play controls that matter: cover, title,
+      // a full-width progress line and play/pause. Chapter text, the time
+      // stamps and the skip buttons have no room there.
       remoteViews.setViewVisibility(R.id.summary, View.GONE)
-      summarizedItemsHeight -= summarySize
+      remoteViews.setViewVisibility(R.id.elapsed, View.GONE)
+      remoteViews.setViewVisibility(R.id.total, View.GONE)
+      remoteViews.setViewVisibility(R.id.rewind, View.GONE)
+      remoteViews.setViewVisibility(R.id.fastForward, View.GONE)
     }
+    remoteViews.setOnClickPendingIntent(R.id.wholeWidget, wholeWidgetClickIntent())
+  }
 
-    // if we ar still to high, hide title
-    if (summarizedItemsHeight > widgetHeight) {
-      remoteViews.setViewVisibility(R.id.title, View.GONE)
+  /**
+   * The blue-to-violet wash, drawn once. Colors carry the transparency so no
+   * launcher-side background plate can flatten it.
+   */
+  private fun gradientBackdrop(): Bitmap {
+    val width = 1_200
+    val height = 400
+    val colors = intArrayOf(
+      Color.argb(BACKDROP_ALPHA, 0x29, 0xA8, 0xDC),
+      Color.argb(BACKDROP_ALPHA, 0x53, 0x98, 0xE4),
+      Color.argb(BACKDROP_ALPHA, 0x7C, 0x6A, 0xE8),
+    )
+    val paint = Paint().apply {
+      shader = LinearGradient(
+        0f,
+        0f,
+        width * 0.7f,
+        height.toFloat(),
+        colors,
+        floatArrayOf(0f, 0.5f, 1f),
+        Shader.TileMode.CLAMP,
+      )
     }
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val radius = context.dpToPxRounded(20f).toFloat()
+    canvas.drawRoundRect(RectF(0f, 0f, width.toFloat(), height.toFloat()), radius, radius, paint)
+    return bitmap
+  }
+
+  private fun wholeWidgetClickIntent(): PendingIntent = mainActivityIntentProvider.toCurrentBook()
+
+  private fun formatTime(ms: Long): String {
+    val totalSeconds = (ms / 1000).coerceAtLeast(0L)
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+      "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+      "%02d:%02d".format(minutes, seconds)
+    }
+  }
+
+  private companion object {
+    const val COVER_SIZE_DP = 64f
+    const val BACKDROP_ALPHA = 191 // 75 percent
   }
 }

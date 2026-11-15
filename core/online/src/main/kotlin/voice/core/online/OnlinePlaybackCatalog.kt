@@ -363,6 +363,17 @@ public class OnlinePlaybackCatalog(
   }
 
   /** The last playback position of an online book, so the UI can resume it. */
+
+  /**
+   * The most recent playback position kept in memory, ahead of the throttled
+   * persistence. Read by surfaces that poll, like the home screen widget.
+   */
+  public fun livePosition(key: String): OnlineLivePosition? {
+    return synchronized(stateLock) {
+      positions[key]?.let { OnlineLivePosition(it.chapterId, it.positionMs) }
+    }
+  }
+
   public fun updatePosition(
     bookId: BookId,
     chapterId: ChapterId,

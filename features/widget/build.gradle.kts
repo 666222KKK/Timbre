@@ -15,6 +15,7 @@ dependencies {
   implementation(projects.core.ui)
   implementation(projects.core.initializer)
   implementation(projects.core.data.api)
+  implementation(projects.core.online)
   implementation(projects.core.playback)
 
   implementation(libs.appCompat)
