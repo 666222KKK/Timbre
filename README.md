@@ -92,7 +92,7 @@ https://cdn.jsdelivr.net/gh/cq10086123/Timbre@main/samples/Timbre.jdr
 
 部分源有请求频率限制，别反复切换。在线章节的时长若源站没给，播放后会自动探测修正；长按书架上的书还能追更章节、缓存全书离线听。
 
-想自己做一个源：[接口源开发套件](samples/README.md)里有空白模板、接口契约说明和打包脚本，按说明填好搜索、章节、播放直链三个函数就能打出一个 `.jdr` 包。做好的源欢迎到[分享区](https://github.com/cq10086123/Timbre/issues/new?template=1-source-share.yml)发一个，也可以先[看看别人分享的源](https://github.com/cq10086123/Timbre/issues?q=label%3A%22source-share%22)。
+想自己做一个源：[接口源开发套件](samples/README.md)里有空白模板、接口契约说明和打包脚本，按说明填好搜索、章节、播放直链三个函数就能打出一个 `.jdr` 包。做源过程中遇到接口格式的问题，可以到 [Issue](https://github.com/cq10086123/Timbre/issues/new?template=4-question.yml) 里问。
 
 ## 隐私：不联网也能听完一本书
 

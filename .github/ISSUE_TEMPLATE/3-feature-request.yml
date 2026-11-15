@@ -13,6 +13,19 @@ body:
         - [功能说明](https://github.com/cq10086123/Timbre/blob/main/docs/features.md)
         - [已有 Issue 里的同类建议](https://github.com/cq10086123/Timbre/issues?q=is%3Aissue)，可以到那里一起讨论
 
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 期望上线平台
+      description: 这个建议主要想在哪个平台上用到？
+      options:
+        - Android
+        - iOS
+        - 所有平台
+        - 不确定
+    validations:
+      required: true
+
   - type: textarea
     id: problem
     attributes:
