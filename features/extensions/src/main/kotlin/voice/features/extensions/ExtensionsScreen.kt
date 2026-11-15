@@ -168,6 +168,9 @@ private fun ExtensionsView(
       val to = packageOrder.indexOf(targetKey.removePrefix("pkg:"))
       if (from < 0 || to < 0 || from == to) return
       packageOrder = packageOrder.toMutableList().also { it.add(to, it.removeAt(from)) }
+      // Persist on every crossing: ending the gesture outside the handle can
+      // skip onDragEnd, and the order would otherwise snap back.
+      listener.onPackageReorder(packageOrder)
       dragOffset += mine.offset - target.offset
     } else if (key.startsWith("src:") && targetKey.startsWith("src:")) {
       val srcId = key.removePrefix("src:")
@@ -179,7 +182,11 @@ private fun ExtensionsView(
       val from = order.indexOf(srcId)
       val to = order.indexOf(targetSrc)
       if (from < 0 || to < 0 || from == to) return
-      sourceOrders = sourceOrders + (pkgId to order.toMutableList().also { it.add(to, it.removeAt(from)) })
+      val moved = sourceOrders + (pkgId to order.toMutableList().also { it.add(to, it.removeAt(from)) })
+      sourceOrders = moved
+      // Same reasoning as packages: don't rely on the gesture surviving until
+      // onDragEnd before the new order reaches the store.
+      listener.onSourceReorder(pkgId, moved.getValue(pkgId))
       dragOffset += mine.offset - target.offset
     }
   }
@@ -193,7 +200,10 @@ private fun ExtensionsView(
       key.startsWith("src:") -> {
         val srcId = key.removePrefix("src:")
         val pkgId = sourceOrders.entries.firstOrNull { srcId in it.value }?.key ?: return
-        listener.onSourceReorder(pkgId, sourceOrders[pkgId].orEmpty())
+        // An empty order here would reset the whole package to manifest order.
+        val order = sourceOrders[pkgId] ?: return
+        if (order.isEmpty()) return
+        listener.onSourceReorder(pkgId, order)
       }
     }
   }
@@ -210,7 +220,7 @@ private fun ExtensionsView(
     },
     snackbarHost = { SnackbarHost(snackbarHostState) },
   ) { contentPadding ->
-    LazyColumn(contentPadding = contentPadding) {
+    LazyColumn(state = listState, contentPadding = contentPadding) {
       item {
         ListItem(
           modifier = Modifier.clickable {
