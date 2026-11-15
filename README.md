@@ -10,7 +10,7 @@
 
 [![version](https://img.shields.io/github/v/release/cq10086123/Timbre?style=flat-square&label=version&color=1d3a7a)](https://github.com/cq10086123/Timbre/releases/latest) [![license](https://img.shields.io/badge/license-GPL--3.0-1d3a7a?style=flat-square)](LICENSE.md) [![android](https://img.shields.io/badge/Android-9%2B-1d3a7a?style=flat-square)](docs/download.md) [![downloads](https://img.shields.io/github/downloads/cq10086123/Timbre/total?style=flat-square&label=downloads&color=1d3a7a)](https://github.com/cq10086123/Timbre/releases) [![stars](https://img.shields.io/github/stars/cq10086123/Timbre?style=flat-square&label=stars&color=1d3a7a)](https://github.com/cq10086123/Timbre/stargazers)
 
-<sub>本地书 · WebDAV / NAS · 在线书源 · .jdr 接口源　|　Android 9+ / iOS · GPL-3.0 · 简体中文 · 免费无内购</sub>
+<sub>本地书 · WebDAV / NAS · 在线书源 · .jdr 接口源 · 发现页　|　Android 9+ / iOS · GPL-3.0 · 简体中文 · 免费无内购</sub>
 
 </div>
 
@@ -18,7 +18,7 @@
 
 ## 提莫听书是什么
 
-提莫听书（Timbre）是一款为中文听书场景做的听书 App / 有声书播放器，覆盖 Android 与 iOS 双端，自由开源、免费、无内购。它按「一口气听几小时」设计：上千集、单本上千小时的长音频，扫描、切章、进度都不掉链子；息屏、锁屏、切后台照样连续播放，不会被系统掐断。手机上下载好的 MP3、M4B、FLAC 直接导入，NAS 上的有声书通过 WebDAV 挂进书架，也可以导入 `.jdr` 接口源在线搜书——三条路的书共用一个书架、一套进度。
+提莫听书（Timbre）是一款为中文听书场景做的听书 App / 有声书播放器，覆盖 Android 与 iOS 双端，自由开源、免费、无内购。它按「一口气听几小时」设计：上千集、单本上千小时的长音频，扫描、切章、进度都不掉链子；息屏、锁屏、切后台照样连续播放，不会被系统掐断。手机上下载好的 MP3、M4B、FLAC 直接导入，NAS 上的有声书通过 WebDAV 挂进书架，也可以导入 `.jdr` 接口源在线搜书——三条路的书共用一个书架、一套进度。不知道听什么的时候，往左滑一下书架就是发现页。
 
 书库、播放进度、书签和缓存全部留在本机。没有账号，没有广告，没有统计与追踪 SDK。
 
@@ -45,11 +45,28 @@
 
 **跳过片头片尾**：每本书单独设置。片头每集只跳一次，不会和暂停回退打架；暂停在片尾不会被强行切走；最后一集照常播完。这些细节是听了几百集之后才补上的。
 
-**睡眠定时器**：渐弱淡出、播完本集停止、摇一摇续命，也能设在某个时间段开始播放时自动开启。
+**睡眠定时器**：支持固定时长、播完本集停止、渐弱淡出、摇一摇续命，也能设在某个时间段开始播放时自动开启。自定义时长可以直接输入分钟数，下次打开还记得上次填的值。
 
 **书架顺手**：自然排序让「第 2 集」排在「第 10 集」前面；解析完第一集就能开播，网格 / 列表切换、全局搜索和「未开始 / 在听 / 听完」标记都在书架页。
 
 **封面自动就位**：音频文件夹里的图片优先于内嵌封面，WebDAV 上的 `cover.jpg`、`folder.png` 这类名字会被优先认出来；一张图都没有时按书名生成一张。手动指定的封面不会被自动覆盖。
+
+## 发现页：不知道听什么的时候
+
+书架向左滑就是发现页。它按你导入的接口源聚合推荐位——榜单、分类、完结、真人等，不同源有不同栏目，直接点进去就能开听，不用先想好书名再搜。
+
+发现页是可选功能：设置里关掉之后，书架只保留书库一页，左滑不会再切过去，底部提示也会一并隐藏。
+
+## 无障碍：为看不见屏幕的人做的
+
+听书是少数「眼睛可以完全离开屏幕」的娱乐方式，但播放器本身往往默认你能看见。v3.7 起针对 TalkBack 用户补了一轮：
+
+- **状态会念出来**：播放 / 暂停、切换章节、加载中都会主动播报，不用反复摸屏幕确认现在在干什么。
+- **滑块有名字也有值**：进度条念「已播 1 分 23 秒，共 45 分钟」而不是百分比；倍速、跳过片头片尾、音量增益、预加载数量都会读出当前值。
+- **进度条能按 30 秒跳**：TalkBack 的操作菜单里直接提供「快进 30 秒」「快退 30 秒」，不必用滑块一点点拖。
+- **输入框自动聚焦**：自定义睡眠时长打开就能直接打字，不用先找输入框。
+
+这些改动只在系统无障碍服务开启时生效，视觉界面没有任何变化。
 
 ## 本地有声书：格式与导入
 
@@ -81,7 +98,7 @@ https://cdn.jsdelivr.net/gh/cq10086123/Timbre@main/samples/Timbre.jdr
 
 无账号、无广告、无统计、无行为追踪 SDK。应用自己只发起两类请求：每天最多一次检查版本、读取维护者公告；其余联网都来自你主动配置的 WebDAV 或在线书源。检查失败会静默放弃，不影响使用，也从不自动下载或安装任何东西。详见[隐私政策](PRIVACY.md)。
 
-提供简体中文与英文界面，支持 Material You 动态取色，以及浅色 / 深色 / 跟随系统主题。
+提供简体中文与英文界面，支持浅色 / 深色 / 跟随系统三种主题。
 
 ## 下载与安装
 
@@ -99,9 +116,13 @@ Android 端到 [GitHub Releases](https://github.com/cq10086123/Timbre/releases/l
 
 **能听 NAS 上的有声书吗？** 能。填好 WebDAV 地址、账号密码即可，群晖、飞牛 fnOS、Alist 都可用；播放边缓存边播，不要求一直连着家里的网络。
 
+**发现页会自己联网拉推荐吗？** 只用你已导入的接口源，不会额外请求别的地方；不想要可以在设置里关掉。
+
+**看不见屏幕能用吗？** 开着 TalkBack 就能完整操作播放：播放暂停、切章、拖动进度、快进快退 30 秒都有语音反馈，具体见上面的[无障碍](#无障碍为看不见屏幕的人做的)一节。
+
 **要登录或者开会员吗？** 不用。完全免费开源，没有账号、没有会员、没有内购。
 
-**和 Voice 是什么关系？** 提莫听书基于 [Voice](https://github.com/PaulWoitaschek/Voice)（GPLv3）二次开发，在中文化之外加了 WebDAV 远程书库、`.jdr` 接口源、跳过片头片尾、自动封面、应用内更新等。详见[关于页](docs/about.md)。
+**和 Voice 是什么关系？** 提莫听书基于 [Voice](https://github.com/PaulWoitaschek/Voice)（GPLv3）二次开发，在中文化之外加了 WebDAV 远程书库、`.jdr` 接口源、发现页、无障碍支持、跳过片头片尾、自动封面、应用内更新等。详见[关于页](docs/about.md)。
 
 更多问题看 [docs/faq.md](docs/faq.md)，或直接提 [Issue](https://github.com/cq10086123/Timbre/issues)（附上设备、系统版本、App 版本和复现步骤，会快很多）。
 
@@ -119,9 +140,31 @@ Debug 包可直接安装（Android 端）。Release 签名、包名覆盖与提�
 
 [GNU GPLv3](LICENSE.md) © Voice 原作者及提莫听书贡献者
 
+## 免责声明
+
+**提莫听书是纯粹的播放器客户端**，自身不提供、不存储、不分发、不托管任何音频、文字、影视内容，也不运营任何内容服务、不设立内容索引、不提供下载站点。
+
+软件能播放的内容全部来自以下三种途径，均由使用者自行提供或选择：
+
+1. **本地文件**——你自己设备上已有的音频文件；
+2. **WebDAV / NAS**——你自己搭建或有权访问的服务器；
+3. **`.jdr` 接口源**——由第三方或你本人编写、导入的接口配置。
+
+项目维护者不参与上述内容的制作、审核、上传与分发，对第三方接口源指向的内容不知情、不控制、不背书，也未从中获取任何收益。
+
+使用本软件即表示你理解并同意：
+
+- 你对所访问、播放的内容拥有合法权利，或已取得权利人许可；
+- 你的使用行为符合所在国家或地区的法律法规；
+- 不将本软件用于侵犯著作权、传播违法信息或其他违法用途。
+
+本项目仅供学习、研究与个人使用，**不得用于任何商业用途**。软件按 GPL-3.0 许可「按原样」提供，不附带任何明示或暗示的担保；因使用或无法使用本软件而产生的任何直接或间接损失及法律责任，由使用者自行承担。
+
+若权利人认为**本项目本身**（不含第三方提供的内容）侵犯其合法权益，请通过 [Issue](https://github.com/cq10086123/Timbre/issues) 与我们联系，我们会及时处理。
+
 ---
 
-Timbre (提莫听书) is a free, open-source audiobook player for Android and iOS: local MP3 / M4B / FLAC files, WebDAV / NAS libraries and custom `.jdr` interface sources in one shelf. Built for long listens — thousands of chapters, uninterrupted playback with the screen off, second-accurate resume. No accounts, no ads, no tracking. [Releases](https://github.com/cq10086123/Timbre/releases/latest).
+Timbre (提莫听书) is a free, open-source audiobook player for Android and iOS: local MP3 / M4B / FLAC files, WebDAV / NAS libraries and custom `.jdr` interface sources in one shelf, with a swipe-left Discover page and full TalkBack support. Built for long listens — thousands of chapters, uninterrupted playback with the screen off, second-accurate resume. No accounts, no ads, no tracking. [Releases](https://github.com/cq10086123/Timbre/releases/latest).
 
 <!-- filler-pr-95 -->
 
