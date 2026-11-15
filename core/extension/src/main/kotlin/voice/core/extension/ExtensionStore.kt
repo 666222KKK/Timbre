@@ -46,8 +46,7 @@ public data class InstalledExtensionPackage(
     return ordered + manifest.sources.filter { it.id !in placed }
   }
 
-  public fun enabledSources(): List<ExtensionSourceMeta> =
-    orderedSources().filter { isSourceEnabled(it.id) }
+  public fun enabledSources(): List<ExtensionSourceMeta> = orderedSources().filter { isSourceEnabled(it.id) }
 }
 
 @Inject

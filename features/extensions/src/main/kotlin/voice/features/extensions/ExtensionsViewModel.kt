@@ -139,7 +139,10 @@ class ExtensionsViewModel(
   }
 
   /** Commits a drag result: the new order of sources inside one package. */
-  fun onSourceReorder(manifestId: String, orderedSourceIds: List<String>) {
+  fun onSourceReorder(
+    manifestId: String,
+    orderedSourceIds: List<String>,
+  ) {
     scope.launch { extensionManager.setSourceOrder(manifestId, orderedSourceIds) }
   }
 
@@ -194,8 +197,7 @@ class ExtensionsViewModel(
     }
   }
 
-  private fun Exception.userMessage(): String =
-    (this as? ExtensionInstallException)?.message ?: "导入失败：${this.message ?: "未知错误"}"
+  private fun Exception.userMessage(): String = (this as? ExtensionInstallException)?.message ?: "导入失败：${this.message ?: "未知错误"}"
 
   private fun InstalledExtensionPackage.toUi(): ExtensionPackageUi {
     val ordered = orderedSources()

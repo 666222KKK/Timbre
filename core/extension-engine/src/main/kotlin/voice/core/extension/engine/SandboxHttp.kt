@@ -97,11 +97,17 @@ public class OkHttpSandboxHttp(baseClient: OkHttpClient) : SandboxHttp {
       continuation.invokeOnCancellation { call.cancel() }
       call.enqueue(
         object : Callback {
-          override fun onFailure(call: Call, e: IOException) {
+          override fun onFailure(
+            call: Call,
+            e: IOException,
+          ) {
             if (continuation.isActive) continuation.resumeWithException(e)
           }
 
-          override fun onResponse(call: Call, response: Response) {
+          override fun onResponse(
+            call: Call,
+            response: Response,
+          ) {
             if (continuation.isActive) continuation.resume(response) else response.close()
           }
         },
@@ -110,24 +116,24 @@ public class OkHttpSandboxHttp(baseClient: OkHttpClient) : SandboxHttp {
     return try {
       withContext(Dispatchers.IO) {
         response.use { response ->
-        val source = response.body.source()
-        source.request(MAX_RESPONSE_BYTES + 1)
-        check(source.buffer.size <= MAX_RESPONSE_BYTES) { "响应超过 ${MAX_RESPONSE_BYTES / 1024 / 1024}MB 上限: $url" }
-        val text = source.readUtf8()
-        val headers = buildJsonObject {
-          // duplicate header names (set-cookie!) are joined, not overwritten
-          val merged = LinkedHashMap<String, String>()
-          response.headers.forEach { (name, value) ->
-            val key = name.lowercase()
-            merged[key] = merged[key]?.let { "$it, $value" } ?: value
+          val source = response.body.source()
+          source.request(MAX_RESPONSE_BYTES + 1)
+          check(source.buffer.size <= MAX_RESPONSE_BYTES) { "响应超过 ${MAX_RESPONSE_BYTES / 1024 / 1024}MB 上限: $url" }
+          val text = source.readUtf8()
+          val headers = buildJsonObject {
+            // duplicate header names (set-cookie!) are joined, not overwritten
+            val merged = LinkedHashMap<String, String>()
+            response.headers.forEach { (name, value) ->
+              val key = name.lowercase()
+              merged[key] = merged[key]?.let { "$it, $value" } ?: value
+            }
+            merged.forEach { (name, value) -> put(name, value) }
           }
-          merged.forEach { (name, value) -> put(name, value) }
-        }
-        buildJsonObject {
-          put("status", response.code)
-          put("headers", headers)
-          put("body", text)
-        }.toString()
+          buildJsonObject {
+            put("status", response.code)
+            put("headers", headers)
+            put("body", text)
+          }.toString()
         }
       }
     } catch (e: Throwable) {

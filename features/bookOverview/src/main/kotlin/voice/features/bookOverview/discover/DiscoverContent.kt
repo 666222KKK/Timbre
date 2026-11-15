@@ -20,6 +20,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -73,7 +74,7 @@ internal fun DiscoverContent(
   var books by remember { mutableStateOf(emptyList<OnlineSearchResult>()) }
   var loading by remember { mutableStateOf(false) }
   var error by remember { mutableStateOf<String?>(null) }
-  var retryToken by remember { mutableStateOf(0) }
+  var retryToken by remember { mutableIntStateOf(0) }
   var cachedBooks by remember { mutableStateOf(emptyMap<String, List<OnlineSearchResult>>()) }
   var chaptersFor by remember { mutableStateOf<OnlineSearchResult?>(null) }
 

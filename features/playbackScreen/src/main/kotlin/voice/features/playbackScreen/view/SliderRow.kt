@@ -22,9 +22,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import voice.core.ui.formatTime
-import voice.core.strings.R as StringsR
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import voice.core.strings.R as StringsR
 
 @Composable
 internal fun SliderRow(

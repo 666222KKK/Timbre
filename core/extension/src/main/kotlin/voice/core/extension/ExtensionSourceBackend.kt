@@ -7,13 +7,13 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import voice.core.extension.engine.SearchItem
 import voice.core.extension.engine.SourceContract
+import voice.core.logging.api.Logger
 import voice.core.online.ExtensionOnlineSource
 import voice.core.online.OnlineChapter
 import voice.core.online.OnlineRecommendGroup
 import voice.core.online.OnlineSearchResult
 import voice.core.online.OnlineSourceInfo
 import voice.core.online.ResolvedStream
-import voice.core.logging.api.Logger
 import java.util.LinkedHashMap
 
 /** sourceId/bookId 级别的透传字段缓存；容量有限，防止长会话内存无限增长。 */
@@ -65,7 +65,10 @@ public class ExtensionSourceBackend(
   }
 
   @Synchronized
-  private fun cachedBrowse(key: String, nowMillis: Long): List<SearchItem>? {
+  private fun cachedBrowse(
+    key: String,
+    nowMillis: Long,
+  ): List<SearchItem>? {
     val entry = browseCache[key] ?: return null
     if (entry.expiresAtMillis <= nowMillis) {
       browseCache.remove(key)
@@ -75,7 +78,12 @@ public class ExtensionSourceBackend(
   }
 
   @Synchronized
-  private fun storeBrowse(key: String, items: List<SearchItem>, ttlMinutes: Int, nowMillis: Long) {
+  private fun storeBrowse(
+    key: String,
+    items: List<SearchItem>,
+    ttlMinutes: Int,
+    nowMillis: Long,
+  ) {
     browseCache[key] = CachedBrowse(items, nowMillis + ttlMinutes * 60_000L)
   }
 

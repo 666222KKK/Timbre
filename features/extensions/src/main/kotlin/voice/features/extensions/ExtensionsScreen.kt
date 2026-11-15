@@ -21,7 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.Alignment
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -39,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -292,12 +292,12 @@ private sealed interface ExtensionRow {
 @Composable
 private fun PackageRow(
   pkg: ExtensionPackageUi,
-  modifier: Modifier,
   onToggle: () -> Unit,
   onUninstall: () -> Unit,
   onDragStart: () -> Unit,
   onDrag: (Float) -> Unit,
   onDragEnd: () -> Unit,
+  modifier: Modifier = Modifier,
 ) {
   ListItem(
     modifier = modifier,
@@ -336,11 +336,11 @@ private fun PackageRow(
 @Composable
 private fun SourceRow(
   source: ExtensionSourceUi,
-  modifier: Modifier,
   onToggle: (Boolean) -> Unit,
   onDragStart: () -> Unit,
   onDrag: (Float) -> Unit,
   onDragEnd: () -> Unit,
+  modifier: Modifier = Modifier,
 ) {
   ListItem(
     modifier = modifier,

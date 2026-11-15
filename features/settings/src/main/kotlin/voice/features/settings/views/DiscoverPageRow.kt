@@ -8,8 +8,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import voice.core.strings.R as StringsR
 import voice.core.ui.icons.VoiceIcons
+import voice.core.strings.R as StringsR
 
 /**
  * Row directly below "use grid layout": turning it off removes the discover

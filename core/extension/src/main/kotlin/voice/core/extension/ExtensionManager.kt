@@ -218,7 +218,10 @@ public class ExtensionManager(
   }
 
   /** Persists whether a package is expanded in the management screen. */
-  public suspend fun setPackageExpanded(manifestId: String, expanded: Boolean) {
+  public suspend fun setPackageExpanded(
+    manifestId: String,
+    expanded: Boolean,
+  ) {
     mutationMutex.withLock {
       packagesStore.updateData { packages ->
         packages.map { pkg ->
@@ -247,7 +250,10 @@ public class ExtensionManager(
    * longer exist are dropped and unknown sources are appended, so a stale drag
    * can never lose a source.
    */
-  public suspend fun setSourceOrder(manifestId: String, orderedIds: List<String>) {
+  public suspend fun setSourceOrder(
+    manifestId: String,
+    orderedIds: List<String>,
+  ) {
     mutationMutex.withLock {
       packagesStore.updateData { packages ->
         packages.map { pkg ->

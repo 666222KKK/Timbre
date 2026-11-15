@@ -266,7 +266,6 @@ private fun Settings(
         )
       }
 
-
       item {
         AutoSleepTimerCard(viewState.autoSleepTimer, listener)
       }

@@ -564,4 +564,3 @@ private fun SleepTimerState.toViewState(): BookPlayViewState.SleepTimerViewState
  * that hangs keeps the ring on instead of looking like a pause.
  */
 private const val WAITING_FOR_AUDIO_GRACE_MS = 700L
-
