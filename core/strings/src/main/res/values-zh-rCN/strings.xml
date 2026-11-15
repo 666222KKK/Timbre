@@ -92,7 +92,6 @@
     <string name="settings.action.open">偏好设置</string>
     <string name="settings.library.use_grid.title">使用网格布局</string>
     <string name="widget.empty.title">还没有在听的书</string>
-    <string name="widget.empty.summary">点一下打开书架</string>
     <string name="overview_page_shelf">书架</string>
     <string name="overview_page_discover">发现页</string>
     <string name="settings.library.discover_page.title">发现页</string>

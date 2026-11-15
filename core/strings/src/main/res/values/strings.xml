@@ -247,7 +247,6 @@
     <!-- Settings row for toggling grid layout in the library. -->
     <string name="settings.library.use_grid.title">Use grid layout</string>
     <string name="widget.empty.title">Nothing playing</string>
-    <string name="widget.empty.summary">Tap to open your shelf</string>
     <string name="overview_page_shelf">Shelf</string>
     <string name="overview_page_discover">Discover</string>
     <string name="settings.library.discover_page.title">Discover page</string>

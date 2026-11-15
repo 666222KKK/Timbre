@@ -13,6 +13,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.view.View
 import android.widget.RemoteViews
+import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.datastore.core.DataStore
 import coil.imageLoader
@@ -297,7 +298,7 @@ class WidgetUpdater(
         Shader.TileMode.CLAMP,
       )
     }
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(width, height, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     val radius = context.dpToPxRounded(20f).toFloat()
     canvas.drawRoundRect(RectF(0f, 0f, width.toFloat(), height.toFloat()), radius, radius, paint)
