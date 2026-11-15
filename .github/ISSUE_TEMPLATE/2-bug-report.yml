@@ -9,8 +9,8 @@ body:
         感谢反馈！信息填得越完整，问题修得越快。
 
         提交前请先：
-        1. 搜索[已有 Issue](https://github.com/cq10086123/Timbre/issues?q=is%3Aissue)，避免重复；
-        2. 升级到[最新版本](https://github.com/cq10086123/Timbre/releases/latest)，确认问题依然存在。
+        1. 搜索[已有 Issue](https://github.com/kxdebug/Timbre/issues?q=is%3Aissue)，避免重复；
+        2. 升级到[最新版本](https://github.com/kxdebug/Timbre/releases/latest)，确认问题依然存在。
 
   - type: dropdown
     id: platform

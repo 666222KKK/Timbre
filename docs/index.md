@@ -9,8 +9,8 @@ hide:
 
 提莫听书把你自己的有声书文件变成一个安静、顺手的听书库：记住每个位置的播放进度、书签、睡眠定时器、倍速播放、跳过片头片尾、自动封面，全部离线可用；还内置 WebDAV 远程书库，把 NAS 上的有声书直接挂进书架；支持导入自定义接口源（.jdr），在线搜索、取章节、拿播放直链全部在本机完成。
 
-[:material-download: &nbsp;下载最新版本](https://github.com/cq10086123/Timbre/releases/latest){ .md-button .md-button--primary }
-[:material-github: &nbsp;GitHub 仓库](https://github.com/cq10086123/Timbre){ .md-button }
+[:material-download: &nbsp;下载最新版本](https://github.com/kxdebug/Timbre/releases/latest){ .md-button .md-button--primary }
+[:material-github: &nbsp;GitHub 仓库](https://github.com/kxdebug/Timbre){ .md-button }
 
 <div class="timbre-screenshots">
   <img src="screenshots/shot-shelf.png" alt="Timbre 书架" />

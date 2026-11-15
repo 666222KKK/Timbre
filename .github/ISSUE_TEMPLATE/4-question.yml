@@ -7,8 +7,8 @@ body:
     attributes:
       value: |
         提问前先看一眼这两处，多半已经有答案：
-        - [常见问题 FAQ](https://github.com/cq10086123/Timbre/blob/main/docs/faq.md)
-        - [README 使用小贴士](https://github.com/cq10086123/Timbre/blob/main/README.md)
+        - [常见问题 FAQ](https://github.com/kxdebug/Timbre/blob/main/docs/faq.md)
+        - [README 使用小贴士](https://github.com/kxdebug/Timbre/blob/main/README.md)
 
         如果确实是程序出错，请改用「Bug 报告」模板，那样能带上更多排查信息。
 

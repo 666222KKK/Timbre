@@ -143,7 +143,7 @@ jobs:
           jq -n \
             --arg versionName "${{ inputs.versionName }}" \
             --argjson versionCode "${{ steps.ver.outputs.versionCode }}" \
-            --arg releaseUrl "https://github.com/cq10086123/Timbre/releases/latest" \
+            --arg releaseUrl "https://github.com/kxdebug/Timbre/releases/latest" \
             --arg releaseNotes "$NOTES" \
             '{versionName: $versionName, versionCode: $versionCode, releaseUrl: $releaseUrl, releaseNotes: $releaseNotes}' > update.json
           git config user.name "github-actions[bot]"

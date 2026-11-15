@@ -4,7 +4,7 @@
 
 ## 反馈问题 | Reporting issues
 
-提交 [GitHub Issues](https://github.com/cq10086123/Timbre/issues) 时请附上：
+提交 [GitHub Issues](https://github.com/kxdebug/Timbre/issues) 时请附上：
 
 - 设备 / 系统版本与 App 版本号（关于页可见）
 - 复现步骤；本地书问题请说明文件格式，WebDAV 问题请说明服务器类型（飞牛 fnOS / 群晖 / Alist 等）

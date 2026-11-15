@@ -3,7 +3,7 @@
 **最后更新：2026-10-22**
 
 Timbre（以下简称"本应用"）是一款**自由开源**的本地有声书播放器（GPLv3），基于开源项目 [Voice](https://github.com/PaulWoitaschek/Voice) 二次开发。完整源代码公开于：
-https://github.com/cq10086123/Timbre
+https://github.com/kxdebug/Timbre
 
 ## 我们的承诺
 
@@ -52,12 +52,12 @@ https://github.com/cq10086123/Timbre
 ## 隐私政策变更
 
 如本政策更新，会在源代码仓库中公布。请通过以下地址查看历史版本：
-https://github.com/cq10086123/Timbre/blob/main/PRIVACY.md
+https://github.com/kxdebug/Timbre/blob/main/PRIVACY.md
 
 ## 联系我们
 
 如对本政策或应用有任何疑问，请在 GitHub 提交 Issue：
-https://github.com/cq10086123/Timbre/issues
+https://github.com/kxdebug/Timbre/issues
 
 ---
 
@@ -72,5 +72,5 @@ Timbre is a free and open-source (GPLv3) local audiobook player, forked from the
 - Permissions (media files, notifications, foreground service, wake lock, Bluetooth) are used solely to provide audiobook playback.
 - Uninstalling the app removes all of its data.
 
-Source code: https://github.com/cq10086123/Timbre
-Questions: open an issue at https://github.com/cq10086123/Timbre/issues
+Source code: https://github.com/kxdebug/Timbre
+Questions: open an issue at https://github.com/kxdebug/Timbre/issues

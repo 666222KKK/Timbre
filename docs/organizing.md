@@ -40,7 +40,7 @@ Timbre 用**文件夹**来组织书库：你注册的每一个文件夹（或单
 
 MP3、M4A/M4B、AAC、FLAC、OGG/OGA、OPUS、WAV、MKA/MKV、MP4、WebM、3GP 等 Android 平台原生支持的格式。
 
-完整列表见源码中的 [SupportedAudioFormats.kt](https://github.com/cq10086123/Timbre/blob/main/core/data/api/src/main/kotlin/voice/core/data/SupportedAudioFormats.kt)。
+完整列表见源码中的 [SupportedAudioFormats.kt](https://github.com/kxdebug/Timbre/blob/main/core/data/api/src/main/kotlin/voice/core/data/SupportedAudioFormats.kt)。
 
 ## 封面
 

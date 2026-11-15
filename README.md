@@ -8,7 +8,7 @@
 
 它不催你开会员，只记得你听到第几秒。
 
-[![version](https://img.shields.io/github/v/release/cq10086123/Timbre?style=flat-square&label=version&color=1d3a7a)](https://github.com/cq10086123/Timbre/releases/latest) [![license](https://img.shields.io/badge/license-GPL--3.0-1d3a7a?style=flat-square)](LICENSE.md) [![android](https://img.shields.io/badge/Android-9%2B-1d3a7a?style=flat-square)](docs/download.md) [![downloads](https://img.shields.io/github/downloads/cq10086123/Timbre/total?style=flat-square&label=downloads&color=1d3a7a)](https://github.com/cq10086123/Timbre/releases) [![stars](https://img.shields.io/github/stars/cq10086123/Timbre?style=flat-square&label=stars&color=1d3a7a)](https://github.com/cq10086123/Timbre/stargazers)
+[![version](https://img.shields.io/github/v/release/kxdebug/Timbre?style=flat-square&label=version&color=1d3a7a)](https://github.com/kxdebug/Timbre/releases/latest) [![license](https://img.shields.io/badge/license-GPL--3.0-1d3a7a?style=flat-square)](LICENSE.md) [![android](https://img.shields.io/badge/Android-9%2B-1d3a7a?style=flat-square)](docs/download.md) [![downloads](https://img.shields.io/github/downloads/kxdebug/Timbre/total?style=flat-square&label=downloads&color=1d3a7a)](https://github.com/kxdebug/Timbre/releases) [![stars](https://img.shields.io/github/stars/kxdebug/Timbre?style=flat-square&label=stars&color=1d3a7a)](https://github.com/kxdebug/Timbre/stargazers)
 
 <sub>本地书 · WebDAV / NAS · 在线书源 · .jdr 接口源 · 发现页　|　Android 9+ / iOS · GPL-3.0 · 简体中文 · 免费无内购</sub>
 
@@ -28,7 +28,7 @@
 | WebDAV / NAS | 填一次服务器地址，浏览目录直接导入 | 群晖、飞牛 fnOS、Alist 上的家庭书库 |
 | 在线书源 / `.jdr` | 导入接口源包，搜索即听 | 想听的书不在自己设备上 |
 
-[接口源直链](https://cdn.jsdelivr.net/gh/cq10086123/Timbre@main/samples/Timbre.jdr) · [功能说明](docs/features.md) · [常见问题](docs/faq.md) · [下载安装](docs/download.md) · [接口制作](samples/README.md)
+[接口源直链](https://cdn.jsdelivr.net/gh/kxdebug/Timbre@main/samples/Timbre.jdr) · [功能说明](docs/features.md) · [常见问题](docs/faq.md) · [下载安装](docs/download.md) · [接口制作](samples/README.md)
 
 ## 长音频稳定性与息屏播放
 
@@ -87,12 +87,12 @@ v3.6.3 起，书架、每本书听到第几章、章节内的位置，以及倍�
 **导入现成的接口源合集**：在 App 内选「从链接导入」，粘贴这条直链：
 
 ```
-https://cdn.jsdelivr.net/gh/cq10086123/Timbre@main/samples/Timbre.jdr
+https://cdn.jsdelivr.net/gh/kxdebug/Timbre@main/samples/Timbre.jdr
 ```
 
 部分源有请求频率限制，别反复切换。在线章节的时长若源站没给，播放后会自动探测修正；长按书架上的书还能追更章节、缓存全书离线听。
 
-想自己做一个源：[接口源开发套件](samples/README.md)里有空白模板、接口契约说明和打包脚本，按说明填好搜索、章节、播放直链三个函数就能打出一个 `.jdr` 包。做源过程中遇到接口格式的问题，可以到 [Issue](https://github.com/cq10086123/Timbre/issues/new?template=4-question.yml) 里问。
+想自己做一个源：[接口源开发套件](samples/README.md)里有空白模板、接口契约说明和打包脚本，按说明填好搜索、章节、播放直链三个函数就能打出一个 `.jdr` 包。做源过程中遇到接口格式的问题，可以到 [Issue](https://github.com/kxdebug/Timbre/issues/new?template=4-question.yml) 里问。
 
 ## 隐私：不联网也能听完一本书
 
@@ -102,9 +102,9 @@ https://cdn.jsdelivr.net/gh/cq10086123/Timbre@main/samples/Timbre.jdr
 
 ## 下载与安装
 
-Android 端到 [GitHub Releases](https://github.com/cq10086123/Timbre/releases/latest) 下载最新签名 APK，Android 9（API 28）及以上直接安装，不需要应用商店。新旧版本同一签名，覆盖安装会保留书库、进度与设置；应用启动后会静默检查更新，只提示、不自动下载。
+Android 端到 [GitHub Releases](https://github.com/kxdebug/Timbre/releases/latest) 下载最新签名 APK，Android 9（API 28）及以上直接安装，不需要应用商店。新旧版本同一签名，覆盖安装会保留书库、进度与设置；应用启动后会静默检查更新，只提示、不自动下载。
 
-[下载 Android 最新版 APK](https://github.com/cq10086123/Timbre/releases/latest) · [全部版本](https://github.com/cq10086123/Timbre/releases) · [安装说明](docs/download.md)
+[下载 Android 最新版 APK](https://github.com/kxdebug/Timbre/releases/latest) · [全部版本](https://github.com/kxdebug/Timbre/releases) · [安装说明](docs/download.md)
 
 ## 常见问题
 
@@ -124,7 +124,7 @@ Android 端到 [GitHub Releases](https://github.com/cq10086123/Timbre/releases/l
 
 **和 Voice 是什么关系？** 提莫听书基于 [Voice](https://github.com/PaulWoitaschek/Voice)（GPLv3）二次开发，在中文化之外加了 WebDAV 远程书库、`.jdr` 接口源、发现页、无障碍支持、跳过片头片尾、自动封面、应用内更新等。详见[关于页](docs/about.md)。
 
-更多问题看 [docs/faq.md](docs/faq.md)，或直接提 [Issue](https://github.com/cq10086123/Timbre/issues)（附上设备、系统版本、App 版本和复现步骤，会快很多）。
+更多问题看 [docs/faq.md](docs/faq.md)，或直接提 [Issue](https://github.com/kxdebug/Timbre/issues)（附上设备、系统版本、App 版本和复现步骤，会快很多）。
 
 ## 从源码构建
 
@@ -152,7 +152,7 @@ Debug 包可直接安装（Android 端）。Release 签名、包名覆盖与提�
 
 项目维护者不参与上述内容的制作、审核、上传与分发，对接口源指向的内容不知情、不控制、不背书，也未从中获取任何收益。
 
-**关于项目提供的示例接口源**：仓库与文档中附带的 `.jdr` 文件是接口格式示例，用于演示「如何请求某个站点、如何解析返回结果」，不含任何音频文件，也不是内容库。实际播放时，音频流由对应站点直接送达你的设备，本项目不存储、不转码、不代理、不分发。项目与示例源均为公益性质：不收费、无广告、无会员、无任何商业收益。若权利人认为某个示例源指向的内容侵犯其权益，可通过 [Issue](https://github.com/cq10086123/Timbre/issues) 联系我们，我们会立即停止提供该源。
+**关于项目提供的示例接口源**：仓库与文档中附带的 `.jdr` 文件是接口格式示例，用于演示「如何请求某个站点、如何解析返回结果」，不含任何音频文件，也不是内容库。实际播放时，音频流由对应站点直接送达你的设备，本项目不存储、不转码、不代理、不分发。项目与示例源均为公益性质：不收费、无广告、无会员、无任何商业收益。若权利人认为某个示例源指向的内容侵犯其权益，可通过 [Issue](https://github.com/kxdebug/Timbre/issues) 联系我们，我们会立即停止提供该源。
 
 使用本软件即表示你理解并同意：
 
@@ -163,11 +163,11 @@ Debug 包可直接安装（Android 端）。Release 签名、包名覆盖与提�
 
 本项目仅供学习、研究与个人使用，**不得用于任何商业用途**。软件按 GPL-3.0 许可「按原样」提供，不附带任何明示或暗示的担保；因使用或无法使用本软件而产生的任何直接或间接损失及法律责任，由使用者自行承担。
 
-若权利人认为**本项目本身**（不含第三方提供的内容）侵犯其合法权益，请通过 [Issue](https://github.com/cq10086123/Timbre/issues) 与我们联系，我们会及时处理。
+若权利人认为**本项目本身**（不含第三方提供的内容）侵犯其合法权益，请通过 [Issue](https://github.com/kxdebug/Timbre/issues) 与我们联系，我们会及时处理。
 
 ---
 
-Timbre (提莫听书) is a free, open-source audiobook player for Android and iOS: local MP3 / M4B / FLAC files, WebDAV / NAS libraries and custom `.jdr` interface sources in one shelf, with a swipe-left Discover page and full TalkBack support. Built for long listens — thousands of chapters, uninterrupted playback with the screen off, second-accurate resume. No accounts, no ads, no tracking. [Releases](https://github.com/cq10086123/Timbre/releases/latest).
+Timbre (提莫听书) is a free, open-source audiobook player for Android and iOS: local MP3 / M4B / FLAC files, WebDAV / NAS libraries and custom `.jdr` interface sources in one shelf, with a swipe-left Discover page and full TalkBack support. Built for long listens — thousands of chapters, uninterrupted playback with the screen off, second-accurate resume. No accounts, no ads, no tracking. [Releases](https://github.com/kxdebug/Timbre/releases/latest).
 
 <!-- filler-pr-95 -->
 
