@@ -1,6 +1,5 @@
 package voice.features.folderPicker.addcontent
 
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -26,7 +25,7 @@ import voice.core.strings.R as StringsR
 @Composable
 internal fun SelectFolder(
   onBack: () -> Unit,
-  onAddFolder: (Uri) -> Unit,
+  onEnter: () -> Unit,
   onImportSource: (SourceImport) -> Unit,
   origin: Origin,
   modifier: Modifier = Modifier,
@@ -71,7 +70,7 @@ internal fun SelectFolder(
             style = MaterialTheme.typography.bodyLarge,
           )
           Spacer(modifier = Modifier.size(24.dp))
-          SelectFolderButtonRow(onAddFolder, onImportSource, onWebDav)
+          SelectFolderButtonRow(onEnter, onImportSource, onWebDav)
         }
       }
     },
@@ -90,7 +89,7 @@ private fun shouldShowImage(): Boolean {
 private fun SelectFolderPreview() {
   SelectFolder(
     onBack = {},
-    onAddFolder = {},
+    onEnter = {},
     onImportSource = {},
     origin = Origin.Default,
   )
