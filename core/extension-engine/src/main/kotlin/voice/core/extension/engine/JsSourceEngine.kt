@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -56,6 +57,37 @@ public class JsSourceEngine private constructor(
     }
   }
 
+  /**
+   * Calls a global function exposed by a companion recommendation script.
+   * This bypasses `registerSource`, so a source can ship independent
+   * recommendation scripts without changing its main script or the prelude.
+   */
+  public suspend fun invokeEntry(
+    entry: String,
+    paramsJson: String,
+    timeoutMillis: Long? = null,
+  ): String = withContext(dispatcher) {
+    // Keep the same call shape as invoke(): the Android QuickJS JNI bridge
+    // fails to hand a resolved promise back to Kotlin when it originates from
+    // a nested async IIFE (`await (async () => {...})()`), which left callers
+    // hanging forever with "The result promise is still pending".
+    val call = "__invokeEntry(${jsString(entry)}, ${jsString(paramsJson)})"
+    val raw = if (timeoutMillis != null) {
+      withTimeout(timeoutMillis) { quickJs.evaluate<String>("await $call") }
+    } else {
+      quickJs.evaluate<String>("await $call")
+    }
+    // __invokeEntry always resolves with an envelope, so a script failure can
+    // never strand the caller on a rejected promise the bridge dropped.
+    val envelope = json.parseToJsonElement(raw).jsonObject
+    if (envelope["ok"]?.jsonPrimitive?.booleanOrNull != true) {
+      throw SourceContractException(
+        envelope["error"]?.jsonPrimitive?.contentOrNull ?: "推荐脚本执行失败",
+      )
+    }
+    return@withContext envelope["json"]?.jsonPrimitive?.contentOrNull ?: "null"
+  }
+
   override fun close() {
     runQuietly { quickJs.close() }
     dispatcher.close()
@@ -80,6 +112,7 @@ public class JsSourceEngine private constructor(
       http: SandboxHttp,
       log: (String) -> Unit = {},
       memoryLimitBytes: Long = DEFAULT_MEMORY_LIMIT_BYTES,
+      additionalScripts: List<Pair<String, String>> = emptyList(),
     ): JsSourceEngine {
       val executor = Executors.newSingleThreadExecutor { r -> Thread(r, "js-source-$sourceId") }
       val dispatcher = executor.asCoroutineDispatcher()
@@ -90,6 +123,13 @@ public class JsSourceEngine private constructor(
           defineBindings(quickJs, http, log)
           quickJs.evaluate<Unit>(readPrelude(), "prelude.js")
           quickJs.evaluate<Unit>(script, scriptName)
+          additionalScripts.forEach { (name, source) ->
+            // Companion scripts usually end in a top-level assignment, whose
+            // completion value is a JsObject/function. Force an `undefined`
+            // completion value so evaluate<Unit> can convert the result, while
+            // keeping top-level declarations in the global scope.
+            quickJs.evaluate<Unit>("$source\nundefined;", name)
+          }
           val info = quickJs.evaluate<String?>("__sourceInfo()")
             ?: throw SourceContractException("源脚本未调用 registerSource")
           val obj: JsonObject = json.parseToJsonElement(info).jsonObject

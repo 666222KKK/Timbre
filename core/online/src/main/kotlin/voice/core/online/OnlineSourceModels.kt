@@ -33,3 +33,17 @@ public data class OnlineChapter(
   val durationSeconds: Int = 0,
   val order: Int = 0,
 )
+
+/** One recommendation slot rendered on the discover page. */
+@Serializable
+public data class OnlineRecommendGroup(
+  /** Source that owns this slot and also handles chapters/audio. */
+  val source: String = "",
+  val sourceName: String = "",
+  val sourceDescription: String = "",
+  val groupId: String = "",
+  val name: String = "",
+  val description: String = "",
+  /** Cache lifetime declared by the source; 0 means "always refetch". */
+  val cacheMinutes: Int = 0,
+)

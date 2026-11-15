@@ -38,25 +38,49 @@ public class ExtensionEngineProvider(private val manager: ExtensionManager) {
     sourceId: String,
     block: suspend (JsSourceEngine) -> T,
   ): T {
-    val pkg = manager.packageFor(sourceId)
-      ?: throw ExtensionInstallException("扩展源 $sourceId 不存在或已停用")
+    val installed = manager.installed()
+    val pkg = installed.firstOrNull { candidate ->
+      candidate.manifest.sources.any { it.id == sourceId } && candidate.isSourceEnabled(sourceId)
+    } ?: throw ExtensionInstallException("扩展源 $sourceId 不存在或已停用")
+
+    // Drop engines whose package was uninstalled. Each cached engine owns a
+    // QuickJS runtime plus a dedicated thread, and nothing else evicts them,
+    // so repeated uninstall/install cycles used to leak both.
+    val live = installed.flatMap { it.manifest.sources }.mapTo(HashSet()) { it.id }
+    mutex.withLock {
+      val stale = engines.filterKeys { it !in live }
+      if (stale.isNotEmpty()) {
+        stale.values.forEach { cached ->
+          try {
+            cached.engine.close()
+          } catch (_: Exception) {
+            // the engine is already unusable; closing is best effort
+          }
+        }
+        engines.keys.removeAll(stale.keys)
+      }
+    }
+
     val cached = mutex.withLock { engines[sourceId] }
-    val engine = if (cached != null && cached.installedAtMillis == pkg.installedAtMillis) {
-      cached.engine
+    val entry = if (cached != null && cached.installedAtMillis == pkg.installedAtMillis) {
+      cached
     } else {
       mutex.withLock {
         val current = engines[sourceId]
         if (current != null && current.installedAtMillis == pkg.installedAtMillis) {
-          current.engine
+          current
         } else {
           current?.engine?.close()
           val created = create(sourceId, pkg)
-          engines[sourceId] = CachedEngine(created, pkg.installedAtMillis)
-          created
+          CachedEngine(created, pkg.installedAtMillis).also { engines[sourceId] = it }
         }
       }
     }
-    return block(engine)
+    // A QuickJs runtime is single-threaded and not safe for overlapping
+    // evaluations. Cancelling a LaunchedEffect does not interrupt the blocking
+    // JNI call, so rapid slot switches used to pile up concurrent evaluates on
+    // one runtime (=> "result promise is still pending"). Serialize per source.
+    return entry.callMutex.withLock { block(entry.engine) }
   }
 
   private suspend fun create(
@@ -64,14 +88,23 @@ public class ExtensionEngineProvider(private val manager: ExtensionManager) {
     pkg: InstalledExtensionPackage,
   ): JsSourceEngine {
     val meta: ExtensionSourceMeta = pkg.manifest.sources.first { it.id == sourceId }
-    val scriptFile = File(manager.packageDir(pkg.manifest.id), meta.script)
-    val script = withContext(Dispatchers.IO) { scriptFile.readText(Charsets.UTF_8) }
+    val dir = manager.packageDir(pkg.manifest.id)
+    val script = withContext(Dispatchers.IO) { File(dir, meta.script).readText(Charsets.UTF_8) }
+    // Several recommendation slots may share one script; load each file once.
+    val recommenderScripts = withContext(Dispatchers.IO) {
+      meta.recommenders.map { it.script }.distinct().mapNotNull { name ->
+        runCatching { name to File(dir, name).readText(Charsets.UTF_8) }
+          .onFailure { Logger.i("[$SOURCE_PREFIX$sourceId] 读取推荐脚本失败: $name (${it.message})") }
+          .getOrNull()
+      }
+    }
     return JsSourceEngine.create(
       sourceId = sourceId,
       script = script,
       scriptName = meta.script,
       http = OkHttpSandboxHttp(if (pkg.manifest.allowInsecure) insecureClient else secureClient),
       log = { line -> Logger.i("[$SOURCE_PREFIX$sourceId] $line") },
+      additionalScripts = recommenderScripts,
     )
   }
 
@@ -115,6 +148,7 @@ public class ExtensionEngineProvider(private val manager: ExtensionManager) {
   private data class CachedEngine(
     val engine: JsSourceEngine,
     val installedAtMillis: Long,
+    val callMutex: Mutex = Mutex(),
   )
 
   public companion object {

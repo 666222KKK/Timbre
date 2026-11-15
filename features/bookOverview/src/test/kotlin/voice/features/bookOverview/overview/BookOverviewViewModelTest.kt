@@ -96,6 +96,7 @@ class BookOverviewViewModelTest {
       playerController = mockk<PlayerController>(),
       currentBookStoreDataStore = MemoryDataStore(null),
       gridModeStore = MemoryDataStore(GridMode.LIST),
+      discoverPageStore = MemoryDataStore(true),
       gridCount = mockk<GridCount> {
         every { useGridAsDefault() } returns false
       },
@@ -109,7 +110,6 @@ class BookOverviewViewModelTest {
       deviceHasStoragePermissionBug = mockk<DeviceHasStoragePermissionBug> {
         every { hasBug } returns MutableStateFlow(false)
       },
-      folderPickerInSettingsFeatureFlag = MemoryFeatureFlag(false),
       experimentalPlaybackPersistenceFeatureFlag = MemoryFeatureFlag(false),
       onlineBooksStore = onlineBooksStore,
       onlineChapterStore = onlineChapterStore,
@@ -185,6 +185,7 @@ class BookOverviewViewModelTest {
       },
       currentBookStoreDataStore = MemoryDataStore(currentBook.id),
       gridModeStore = MemoryDataStore(GridMode.LIST),
+      discoverPageStore = MemoryDataStore(true),
       gridCount = mockk<GridCount> {
         every { useGridAsDefault() } returns false
       },
@@ -198,7 +199,6 @@ class BookOverviewViewModelTest {
       deviceHasStoragePermissionBug = mockk<DeviceHasStoragePermissionBug> {
         every { hasBug } returns MutableStateFlow(false)
       },
-      folderPickerInSettingsFeatureFlag = MemoryFeatureFlag(false),
       experimentalPlaybackPersistenceFeatureFlag = MemoryFeatureFlag(true),
       onlineBooksStore = MemoryDataStore(emptyList()),
       onlineChapterStore = onlineChapterStore,
@@ -367,6 +367,7 @@ class BookOverviewViewModelTest {
       playerController = mockk(),
       currentBookStoreDataStore = MemoryDataStore(null),
       gridModeStore = MemoryDataStore(GridMode.LIST),
+      discoverPageStore = MemoryDataStore(true),
       gridCount = mockk<GridCount> {
         every { useGridAsDefault() } returns false
       },
@@ -380,7 +381,6 @@ class BookOverviewViewModelTest {
       deviceHasStoragePermissionBug = mockk<DeviceHasStoragePermissionBug> {
         every { hasBug } returns MutableStateFlow(false)
       },
-      folderPickerInSettingsFeatureFlag = MemoryFeatureFlag(false),
       experimentalPlaybackPersistenceFeatureFlag = MemoryFeatureFlag(false),
       onlineBooksStore = MemoryDataStore(emptyList()),
       onlineChapterStore = onlineChapterStore,
@@ -404,53 +404,6 @@ class BookOverviewViewModelTest {
         actual = state.books.getValue(BookOverviewCategory.CURRENT).keys.toList(),
       )
       assertEquals(expected = "Echoes of Tomorrow", actual = state.currentBook(KioskModeDemoData.currentlyPlaying.id).name)
-    }
-  }
-
-  @Test
-  fun `folder picker icon is hidden when folder picker in settings flag is true`() = runTest {
-    val viewModel = viewModel(
-      folderPickerInSettingsFeatureFlag = MemoryFeatureFlag(true),
-    )
-
-    backgroundScope.launchMolecule(RecompositionMode.Immediate) {
-      viewModel.state()
-    }.test {
-      assertEquals(expected = false, actual = awaitItem().showFolderPickerIcon)
-    }
-  }
-
-  @Test
-  fun `folder picker icon is shown once when flag is false`() = runTest {
-    val viewModel = viewModel(
-      folderPickerInSettingsFeatureFlag = MemoryFeatureFlag(false),
-    )
-
-    backgroundScope.launchMolecule(RecompositionMode.Immediate) {
-      viewModel.state()
-    }.test {
-      assertEquals(expected = true, actual = awaitItem().showFolderPickerIcon)
-    }
-  }
-
-  @Test
-  fun `folder picker click navigates to the folder picker`() = runTest {
-    val navigator = mockk<Navigator>(relaxed = true)
-    val viewModel = viewModel(
-      navigator = navigator,
-      folderPickerInSettingsFeatureFlag = MemoryFeatureFlag(false),
-    )
-
-    backgroundScope.launchMolecule(RecompositionMode.Immediate) {
-      viewModel.state()
-    }.test {
-      awaitItem()
-
-      viewModel.onBookFolderClick()
-
-      verify {
-        navigator.goTo(Destination.FolderPicker)
-      }
     }
   }
 
@@ -492,7 +445,6 @@ class BookOverviewViewModelTest {
   }
 
   private fun viewModel(
-    folderPickerInSettingsFeatureFlag: MemoryFeatureFlag<Boolean> = MemoryFeatureFlag(false),
     navigator: Navigator = mockk(),
     books: List<Book> = emptyList(),
     // not named bookScanProgress: that would shadow the mocked property
@@ -525,6 +477,7 @@ class BookOverviewViewModelTest {
       playerController = mockk(),
       currentBookStoreDataStore = MemoryDataStore(null),
       gridModeStore = MemoryDataStore(GridMode.LIST),
+      discoverPageStore = MemoryDataStore(true),
       gridCount = mockk<GridCount> {
         every { useGridAsDefault() } returns false
       },
@@ -536,7 +489,6 @@ class BookOverviewViewModelTest {
       deviceHasStoragePermissionBug = mockk<DeviceHasStoragePermissionBug> {
         every { hasBug } returns MutableStateFlow(false)
       },
-      folderPickerInSettingsFeatureFlag = folderPickerInSettingsFeatureFlag,
       experimentalPlaybackPersistenceFeatureFlag = MemoryFeatureFlag(false),
       onlineBooksStore = MemoryDataStore(emptyList()),
       onlineChapterStore = onlineChapterStore,

@@ -17,6 +17,8 @@ data class BookOverviewViewState(
   val searchViewState: BookSearchViewState,
   val showStoragePermissionBugCard: Boolean,
   val showFolderPickerIcon: Boolean,
+  /** When false the shelf pager only holds the library page. */
+  val discoverPageEnabled: Boolean = true,
 ) {
 
   companion object {

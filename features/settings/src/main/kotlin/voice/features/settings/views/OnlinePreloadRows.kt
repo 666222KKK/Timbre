@@ -18,6 +18,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import voice.core.strings.R as StringsR
@@ -100,7 +103,13 @@ internal fun OnlinePreloadSliderDialog(
           text = stringResource(valueFormatRes, sliderValue.roundToInt()),
           style = MaterialTheme.typography.bodyLarge,
         )
+        val preloadLabel = stringResource(StringsR.string.a11y_slider_preload)
+        val preloadState = stringResource(valueFormatRes, sliderValue.roundToInt())
         Slider(
+          modifier = Modifier.semantics {
+            contentDescription = preloadLabel
+            stateDescription = preloadState
+          },
           value = sliderValue,
           valueRange = min.toFloat()..max.toFloat(),
           onValueChange = { sliderValue = it },

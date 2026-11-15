@@ -30,11 +30,11 @@ import voice.core.data.PlaybackPosition
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.internals.dao.RecentBookSearchDao
 import voice.core.data.store.CurrentBookStore
+import voice.core.data.store.DiscoverPageStore
 import voice.core.data.store.GridModeStore
 import voice.core.data.withoutAudioFileExtension
 import voice.core.featureflag.ExperimentalPlaybackPersistenceQualifier
 import voice.core.featureflag.FeatureFlag
-import voice.core.featureflag.FolderPickerInSettingsFeatureFlagQualifier
 import voice.core.featureflag.KioskModeFeatureFlagQualifier
 import voice.core.logging.api.Logger
 import voice.core.online.OnlineBook
@@ -71,13 +71,13 @@ class BookOverviewViewModel(
   private val currentBookStoreDataStore: DataStore<BookId?>,
   @GridModeStore
   private val gridModeStore: DataStore<GridMode>,
+  @DiscoverPageStore
+  private val discoverPageStore: DataStore<Boolean>,
   private val gridCount: GridCount,
   private val navigator: Navigator,
   private val recentBookSearchDao: RecentBookSearchDao,
   private val search: BookSearch,
   private val deviceHasStoragePermissionBug: DeviceHasStoragePermissionBug,
-  @FolderPickerInSettingsFeatureFlagQualifier
-  private val folderPickerInSettingsFeatureFlag: FeatureFlag<Boolean>,
   @ExperimentalPlaybackPersistenceQualifier
   private val experimentalPlaybackPersistenceFeatureFlag: FeatureFlag<Boolean>,
   @KioskModeFeatureFlagQualifier
@@ -150,6 +150,8 @@ class BookOverviewViewModel(
 
     val noBooks = !scannerActive && books.isEmpty()
 
+    val discoverPageEnabled by remember { discoverPageStore.data }.collectAsState(initial = true)
+
     val layoutMode = when (gridMode) {
       GridMode.LIST -> BookOverviewLayoutMode.List
       GridMode.GRID -> BookOverviewLayoutMode.Grid
@@ -217,6 +219,7 @@ class BookOverviewViewModel(
 
     return BookOverviewViewState(
       layoutMode = layoutMode,
+      discoverPageEnabled = discoverPageEnabled,
       books = booksWithPendingImports,
       playButtonState = if (playState == PlayStateManager.PlayState.Playing) {
         BookOverviewViewState.PlayButtonState.Playing
@@ -233,7 +236,7 @@ class BookOverviewViewModel(
       searchActive = searchActive,
       searchViewState = bookSearchViewState,
       showStoragePermissionBugCard = hasStoragePermissionBug,
-      showFolderPickerIcon = !folderPickerInSettingsFeatureFlag.get(),
+      showFolderPickerIcon = false,
     )
   }
 

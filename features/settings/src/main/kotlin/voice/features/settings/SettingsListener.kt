@@ -1,15 +1,13 @@
 package voice.features.settings
 
-import voice.core.data.ThemeColorScheme
 import voice.core.data.ThemeMode
 import java.time.LocalTime
 
 interface SettingsListener {
   fun close()
   fun onThemeModeRowClick()
-  fun onThemeColorSchemeRowClick()
   fun setThemeMode(themeMode: ThemeMode)
-  fun setThemeColorScheme(themeColorScheme: ThemeColorScheme)
+  fun toggleDiscoverPage()
   fun toggleGrid()
   fun dismissDialog()
   fun openProjectRepository()
@@ -18,11 +16,8 @@ interface SettingsListener {
   fun setAutoSleepTimerStart(time: LocalTime)
   fun setAutoSleepTimerEnd(time: LocalTime)
   fun toggleAnalytics()
-  fun openFolderPicker()
   fun openWebDav()
   fun openExtensions()
-  fun openSourceShare()
-  fun setAutoRefreshWifi(checked: Boolean)
   fun setOnlineSourceEnabled(checked: Boolean)
   fun onOnlineSourceBaseUrlRowClick()
   fun onOnlineSourceCredentialRowClick()
@@ -39,9 +34,8 @@ interface SettingsListener {
     fun noop() = object : SettingsListener {
       override fun close() {}
       override fun onThemeModeRowClick() {}
-      override fun onThemeColorSchemeRowClick() {}
       override fun setThemeMode(themeMode: ThemeMode) {}
-      override fun setThemeColorScheme(themeColorScheme: ThemeColorScheme) {}
+      override fun toggleDiscoverPage() {}
       override fun toggleGrid() {}
       override fun setOnlineSourceEnabled(checked: Boolean) {}
       override fun onOnlineSourceBaseUrlRowClick() {}
@@ -56,11 +50,8 @@ interface SettingsListener {
       override fun setAutoSleepTimerStart(time: LocalTime) {}
       override fun setAutoSleepTimerEnd(time: LocalTime) {}
       override fun toggleAnalytics() {}
-      override fun openFolderPicker() {}
       override fun openWebDav() {}
       override fun openExtensions() {}
-      override fun openSourceShare() {}
-      override fun setAutoRefreshWifi(checked: Boolean) {}
       override fun onAppVersionClick() {}
       override fun onUpdateDialogConfirm() {}
       override fun onUpdateDialogDismiss() {}

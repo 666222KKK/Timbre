@@ -110,22 +110,6 @@ private fun Settings(
       }
       item {
         ListItem(
-          modifier = Modifier.clickable { listener.openFolderPicker() },
-          leadingContent = {
-            Icon(
-              imageVector = VoiceIcons.Book,
-              contentDescription = stringResource(StringsR.string.library_folders_title),
-            )
-          },
-          supportingContent = {
-            Text(stringResource(StringsR.string.settings_library_folders_summary))
-          },
-        ) {
-          Text(stringResource(StringsR.string.library_folders_title))
-        }
-      }
-      item {
-        ListItem(
           modifier = Modifier.clickable { listener.openWebDav() },
           leadingContent = {
             Icon(
@@ -180,19 +164,6 @@ private fun Settings(
           }
         }
       }
-      item {
-        ListItem(
-          modifier = Modifier.clickable { listener.openSourceShare() },
-          leadingContent = {
-            Icon(
-              imageVector = VoiceIcons.Language,
-              contentDescription = stringResource(StringsR.string.settings_source_share_title),
-            )
-          },
-        ) {
-          Text(stringResource(StringsR.string.settings_source_share_title))
-        }
-      }
       if (viewState.onlineSourceEnabled) {
         item {
           ListItem(
@@ -238,40 +209,30 @@ private fun Settings(
         }
       }
       item {
-        ListItem(
-          modifier = Modifier.clickable { listener.setAutoRefreshWifi(!viewState.autoRefreshWifi) },
-          leadingContent = {
-            Icon(
-              imageVector = VoiceIcons.Language,
-              contentDescription = stringResource(StringsR.string.settings_library_auto_refresh_wifi_title),
-            )
-          },
-          supportingContent = {
-            Text(stringResource(StringsR.string.settings_library_auto_refresh_wifi_summary))
-          },
-          trailingContent = {
-            Switch(
-              checked = viewState.autoRefreshWifi,
-              onCheckedChange = listener::setAutoRefreshWifi,
-            )
-          },
-        ) {
-          Text(stringResource(StringsR.string.settings_library_auto_refresh_wifi_title))
-        }
-      }
-      item {
         ThemeModeRow(viewState.themeMode, listener::onThemeModeRowClick)
-      }
-      if (viewState.showThemeColorSchemePref) {
-        item {
-          ThemeColorSchemeRow(viewState.themeColorScheme, listener::onThemeColorSchemeRowClick)
-        }
       }
       if (viewState.showAnalyticSetting && !viewState.kioskMode) {
         item {
           AnalyticsRow(analyticsEnabled = viewState.analyticsEnabled, toggle = listener::toggleAnalytics)
         }
       }
+      item {
+        ListItem(
+          modifier = Modifier.clickable { listener.openPlayerSettings() },
+          leadingContent = {
+            Icon(
+              imageVector = VoiceIcons.Timelapse,
+              contentDescription = stringResource(StringsR.string.settings_player_title),
+            )
+          },
+          supportingContent = {
+            Text(stringResource(StringsR.string.settings_player_summary))
+          },
+        ) {
+          Text(stringResource(StringsR.string.settings_player_title))
+        }
+      }
+
       item {
         ListItem(
           modifier = Modifier.clickable { listener.toggleGrid() },
@@ -298,23 +259,13 @@ private fun Settings(
           Text(stringResource(StringsR.string.settings_library_use_grid_title))
         }
       }
-
       item {
-        ListItem(
-          modifier = Modifier.clickable { listener.openPlayerSettings() },
-          leadingContent = {
-            Icon(
-              imageVector = VoiceIcons.Timelapse,
-              contentDescription = stringResource(StringsR.string.settings_player_title),
-            )
-          },
-          supportingContent = {
-            Text(stringResource(StringsR.string.settings_player_summary))
-          },
-        ) {
-          Text(stringResource(StringsR.string.settings_player_title))
-        }
+        DiscoverPageRow(
+          enabled = viewState.discoverPageEnabled,
+          onToggle = listener::toggleDiscoverPage,
+        )
       }
+
 
       item {
         AutoSleepTimerCard(viewState.autoSleepTimer, listener)
@@ -484,13 +435,6 @@ private fun Dialog(
       ThemeModeDialog(
         selectedThemeMode = viewState.themeMode,
         onThemeModeSelect = listener::setThemeMode,
-        onDismiss = listener::dismissDialog,
-      )
-    }
-    SettingsViewState.Dialog.ColorScheme -> {
-      ThemeColorSchemeDialog(
-        selectedThemeColorScheme = viewState.themeColorScheme,
-        onThemeColorSchemeSelect = listener::setThemeColorScheme,
         onDismiss = listener::dismissDialog,
       )
     }

@@ -15,6 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import voice.core.strings.R
@@ -55,7 +58,11 @@ internal fun ChapterRow(
         Spacer(modifier = Modifier.size(28.dp))
       }
       Text(
-        modifier = Modifier.padding(horizontal = 4.dp),
+        modifier = Modifier
+          .padding(horizontal = 4.dp)
+          // Announce chapter changes: a blind user has no way to see that the
+          // player moved on to the next chapter.
+          .semantics { liveRegion = LiveRegionMode.Polite },
         text = chapterName,
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Center,
@@ -64,7 +71,9 @@ internal fun ChapterRow(
         Icon(
           modifier = Modifier.size(28.dp),
           imageVector = VoiceIcons.ExpandMore,
-          contentDescription = stringResource(id = R.string.playback_chapter_next),
+          // Purely decorative hint for the tappable chapter title; giving it a
+          // description made TalkBack read "next chapter" on a non-button.
+          contentDescription = null,
         )
       }
     }

@@ -8,6 +8,7 @@ data class PlayerSettingsViewState(
   val seekTimeInSeconds: Int,
   val autoRewindInSeconds: Int,
   val btSkipToChapter: Boolean,
+  val autoRefreshWifi: Boolean,
   val dialog: Dialog?,
 ) {
   enum class Dialog {

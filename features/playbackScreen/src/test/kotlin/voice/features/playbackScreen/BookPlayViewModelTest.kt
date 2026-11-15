@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import voice.core.common.DispatcherProvider
@@ -173,34 +174,18 @@ class BookPlayViewModelTest {
     yield()
     assertDialogSleepTime(5)
 
-    suspend fun incrementAndAssert(time: Int) {
-      viewModel.incrementSleepTime()
-      yield()
-      assertDialogSleepTime(time)
-    }
-
-    suspend fun decrementAndAssert(time: Int) {
-      viewModel.decrementSleepTime()
-      yield()
-      assertDialogSleepTime(time)
-    }
-
-    decrementAndAssert(4)
-    decrementAndAssert(3)
-    decrementAndAssert(2)
-    decrementAndAssert(1)
-
-    decrementAndAssert(1)
-
-    incrementAndAssert(2)
-    incrementAndAssert(3)
+    // Picking a duration stores it, so the custom row reuses it next time.
+    viewModel.onAcceptSleepTime(35)
+    advanceUntilIdle()
+    assertEquals(expected = 35.minutes, actual = sleepTimerDataStore.data.first().duration)
   }
 
   @Test
   fun sleepTimerSettingFixedValue() = scope.runTest {
     viewModel.toggleSleepTimer()
     viewModel.onAcceptSleepTime(10)
-    assertEquals(expected = 5.minutes, actual = sleepTimerDataStore.data.first().duration)
+    // The picked duration is remembered so the custom row reuses it next time.
+    assertEquals(expected = 10.minutes, actual = sleepTimerDataStore.data.first().duration)
     yield()
     verify(exactly = 1) {
       sleepTimer.enable(TimedWithDuration(10.minutes))

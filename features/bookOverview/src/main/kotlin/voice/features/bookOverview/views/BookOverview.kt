@@ -2,13 +2,27 @@ package voice.features.bookOverview.views
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.material3.SheetValue.Expanded
 import androidx.compose.material3.SheetValue.Hidden
 import androidx.compose.material3.TopAppBarDefaults
@@ -22,7 +36,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -45,6 +61,7 @@ import voice.features.bookOverview.bottomSheet.BottomSheetContent
 import voice.features.bookOverview.bottomSheet.BottomSheetItem
 import voice.features.bookOverview.deleteBook.DeleteBookDialog
 import voice.features.bookOverview.di.BookOverviewGraph
+import voice.features.bookOverview.discover.DiscoverContent
 import voice.features.bookOverview.editTitle.EditBookTitleDialog
 import voice.features.bookOverview.onlineActions.OnlineCacheDialog
 import voice.features.bookOverview.onlineActions.OnlineRefreshDialog
@@ -227,6 +244,7 @@ fun BookOverviewScreen(modifier: Modifier = Modifier) {
   }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun BookOverview(
   viewState: BookOverviewViewState,
@@ -272,43 +290,130 @@ internal fun BookOverview(
     },
     contentWindowInsets = WindowInsets(0, 0, 0, 0),
   ) { contentPadding ->
-    Box(
-      Modifier
-        .padding(contentPadding)
-        .consumeWindowInsets(contentPadding),
-    ) {
-      val shelfEmpty = viewState.books.values.none { it.isNotEmpty() }
-      if (shelfEmpty &&
-        !viewState.showStoragePermissionBugCard &&
-        !viewState.searchActive
-      ) {
-        // a running import is indicated by the progress on the book cards, so
-        // the shelf shouldn't stay blank while the first books are imported
-        EmptyShelf(onAddClick = onAddBookClick)
-      } else {
-        when (viewState.layoutMode) {
-          BookOverviewLayoutMode.List -> {
-            ListBooks(
-              books = viewState.books,
-              onBookClick = onBookClick,
-              onBookLongClick = onBookLongClick,
-              onRetryImport = onRetryImport,
-              showPermissionBugCard = viewState.showStoragePermissionBugCard,
-              onPermissionBugCardClick = onPermissionBugCardClick,
-            )
+    val pageCount = if (viewState.discoverPageEnabled) 2 else 1
+    val pagerState = rememberPagerState(pageCount = { pageCount })
+    // Turning the discover page off while it is the current page must land the
+    // pager back on the shelf instead of an out-of-range page.
+    LaunchedEffect(pageCount) {
+      if (pagerState.currentPage >= pageCount) {
+        pagerState.scrollToPage(pageCount - 1)
+      }
+    }
+    val pagerScope = rememberCoroutineScope()
+    Box(Modifier.fillMaxSize()) {
+      HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize(),
+        userScrollEnabled = !viewState.searchActive,
+      ) { page ->
+        if (page == 0) {
+          Box(
+            Modifier
+              // Scaffold used to force this Box to fill its content slot. Inside
+              // a pager page it is measured against its content and centered,
+              // so the size must be explicit to keep the shelf top-aligned.
+              .fillMaxSize()
+              .padding(contentPadding)
+              .consumeWindowInsets(contentPadding),
+          ) {
+            val shelfEmpty = viewState.books.values.none { it.isNotEmpty() }
+            if (shelfEmpty &&
+              !viewState.showStoragePermissionBugCard &&
+              !viewState.searchActive
+            ) {
+              // a running import is indicated by the progress on the book cards, so
+              // the shelf shouldn't stay blank while the first books are imported
+              EmptyShelf(onAddClick = onAddBookClick)
+            } else {
+              when (viewState.layoutMode) {
+                BookOverviewLayoutMode.List -> {
+                  ListBooks(
+                    books = viewState.books,
+                    onBookClick = onBookClick,
+                    onBookLongClick = onBookLongClick,
+                    onRetryImport = onRetryImport,
+                    showPermissionBugCard = viewState.showStoragePermissionBugCard,
+                    onPermissionBugCardClick = onPermissionBugCardClick,
+                  )
+                }
+                BookOverviewLayoutMode.Grid -> {
+                  GridBooks(
+                    books = viewState.books,
+                    onBookClick = onBookClick,
+                    onBookLongClick = onBookLongClick,
+                    onRetryImport = onRetryImport,
+                    showPermissionBugCard = viewState.showStoragePermissionBugCard,
+                    onPermissionBugCardClick = onPermissionBugCardClick,
+                  )
+                }
+              }
+            }
           }
-          BookOverviewLayoutMode.Grid -> {
-            GridBooks(
-              books = viewState.books,
-              onBookClick = onBookClick,
-              onBookLongClick = onBookLongClick,
-              onRetryImport = onRetryImport,
-              showPermissionBugCard = viewState.showStoragePermissionBugCard,
-              onPermissionBugCardClick = onPermissionBugCardClick,
-            )
-          }
+        } else {
+          DiscoverContent(
+            onBookClick = onSearchBookClick,
+            contentPadding = contentPadding,
+          )
         }
       }
+      // The pill only advertises the discover page; with the page disabled the
+      // pager has a single page and the hint would be misleading.
+      if (!viewState.searchActive && viewState.discoverPageEnabled) {
+        PagerIsland(
+          currentPage = pagerState.currentPage,
+          onToggle = { page ->
+            pagerScope.launch { pagerState.animateScrollToPage(page) }
+          },
+          modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .navigationBarsPadding()
+            .padding(bottom = 20.dp),
+        )
+      }
+    }
+  }
+}
+
+/** Bottom-center pill that makes the two-page pager discoverable and tappable. */
+@Composable
+private fun PagerIsland(
+  currentPage: Int,
+  onToggle: (Int) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  val onDiscover = currentPage == 1
+  Surface(
+    modifier = modifier
+      .clip(RoundedCornerShape(percent = 50))
+      .clickable { onToggle(if (onDiscover) 0 else 1) },
+    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
+    tonalElevation = 3.dp,
+  ) {
+    Row(
+      modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      repeat(2) { index ->
+        val active = index == currentPage
+        Box(
+          Modifier
+            .size(if (active) 8.dp else 6.dp)
+            .clip(CircleShape)
+            .background(
+              if (active) {
+                MaterialTheme.colorScheme.primary
+              } else {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+              },
+            ),
+        )
+      }
+      Text(
+        text = if (onDiscover) "发现 · 右滑回书架" else "书架 · 左滑看发现",
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
     }
   }
 }

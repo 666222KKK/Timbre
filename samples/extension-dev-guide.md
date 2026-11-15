@@ -322,6 +322,119 @@ async audio(params) {
 
 ---
 
+## 三·六、推荐位（发现页）与缓存
+
+推荐位让源出现在「发现页」：用户从书架左滑到第二页，按**接口源 → 推荐位**两级选择，
+点书后走主源的 `chapters/audio`。
+
+### 1. 文件结构：配置与脚本分离
+
+```
+my-source/
+├── manifest.json      ← 源里只加一行 "recommenderConfig"
+├── source1.js         ← 主源（search/chapters/audio）
+├── rank.json          ← 推荐位配置（id/name/entry/缓存）
+└── rank.js            ← 推荐脚本（不注册源，只挂全局函数）
+```
+
+`manifest.json`：
+
+```json
+{
+  "sources": [{
+    "id": "mysource",
+    "name": "我的源",
+    "script": "source1.js",
+    "capabilities": ["search", "chapters", "audio"],
+    "description": "发现页上显示的源简介（可选）",
+    "recommenderConfig": "rank.json"
+  }]
+}
+```
+
+> 也可以把推荐位直接内联成 `"recommenders": [...]`（老写法）。两种二选一；
+> 同时存在时 `recommenderConfig` 生效。推荐位多时建议外置，总 manifest 不会膨胀。
+
+### 2. rank.json：一个脚本，多个推荐位
+
+```json
+{
+  "script": "rank.js",
+  "recommenders": [
+    {
+      "id": "hot",
+      "name": "热门榜单",
+      "entry": "__rec_hot",
+      "description": "站内播放量最高",
+      "cacheMinutes": 180
+    },
+    {
+      "id": "newest",
+      "name": "最新上架",
+      "entry": "__rec_newest"
+    }
+  ]
+}
+```
+
+- `script`：脚本文件名，所有槽位继承；某槽位要用别的脚本时单独写 `script` 覆盖
+- `id`：推荐位 id，会作为 `groupId` 传给脚本；同一源内不能重复
+- `name`：界面上 chip 的文字（必填）
+- `entry`：脚本里挂到 `globalThis` 的函数名（必填，字母/下划线开头）
+- `description`：chip 下方说明（可选，≤200 字）
+- `cacheMinutes`：缓存分钟数，`0` 或不写 = 不缓存，上限 10080（7 天）
+
+### 3. rank.js：不调用 registerSource
+
+```js
+;(function () {
+  'use strict';
+
+  globalThis.__rec_hot = async function (params) {
+    // params = { groupId, page, limit }
+    var resp = await http.get('https://api.example.com/rank', {
+      params: { section: params.groupId, page: params.page },
+      timeoutMs: 15000,
+    });
+    if (resp.status !== 200) throw new Error('榜单请求失败: HTTP ' + resp.status);
+    return (JSON.parse(resp.body).list || []).map(function (it) {
+      return {
+        id: String(it.id),
+        bookTitle: it.title,
+        bookImage: it.cover || '',
+        bookAnchor: it.author || '',
+        count: it.tracks || 0,
+        albumId: String(it.id), // 透传给 chapters
+      };
+    });
+  };
+})();
+```
+
+**返回字段与 `search` 完全一致**。宿主会把它当成主源的搜索结果，所以点击后自动走
+`jdr:<主源id>` 的 `chapters()` / `audio()`，自定义字段（`albumId` 等）走同一套透传逻辑。
+
+### 4. 缓存语义（按推荐位独立）
+
+- `cacheMinutes: 180`：首次拉取后缓存 3 小时；有效期内再次点该推荐位，
+  **不发请求、不启动 JS 引擎**，直接用缓存（日志 `[discover-cache] hit ...`）
+- 过期后自动重新拉取并覆盖
+- 每个推荐位独立配置，不写的槽位始终实时拉取
+- 缓存在内存里，APP 进程被系统杀掉后失效（下次重新拉一次）
+- 重新导入/更新扩展包会自动失效（缓存键包含安装时间）
+
+### 5. 常见错误
+
+| 现象 | 原因 |
+| --- | --- |
+| 发现页没有你的源 | 源没声明 `recommenders`，或 `recommenderConfig` 指向的文件没打进包 |
+| 报「推荐脚本缺少 \_\_rec\_xxx」 | `entry` 名字与脚本里 `globalThis.xxx` 不一致 |
+| 报「推荐配置文件不存在」 | 写了 `recommenderConfig` 但打包时漏了该 JSON |
+| 点书进章节报错 | 推荐结果没带 `albumId`（或主源 chapters 依赖的其他透传字段） |
+| 一直转圈/超时 | 推荐接口本身慢：缩短单次超时并重试，或给该槽位加 `cacheMinutes` |
+
+---
+
 ## 四、打包成 .jdr
 
 一个源包 = 一个目录（**一个包可以装多个接口**，`sources` 数组每项一个）：
@@ -330,7 +443,9 @@ async audio(params) {
 my-source/
 ├── manifest.json      ← 包描述 + 源声明
 ├── source1.js         ← sources[].script 指向的脚本（可多个）
-└── source2.js
+├── source2.js
+├── rank.json          ← 推荐位配置（可选，recommenderConfig 指向它）
+└── rank.js            ← 推荐脚本（可选，不注册源）
 ```
 
 单源 manifest：

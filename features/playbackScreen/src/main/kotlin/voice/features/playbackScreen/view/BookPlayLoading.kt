@@ -10,6 +10,12 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import voice.core.strings.R as StringsR
 
 /**
  * Shown while a book is still being assembled - an online book is fetched from
@@ -30,7 +36,13 @@ internal fun BookPlayLoading(snackbarHostState: SnackbarHostState) {
         .padding(contentPadding),
       contentAlignment = Alignment.Center,
     ) {
-      CircularProgressIndicator()
+      val loadingLabel = stringResource(StringsR.string.a11y_loading)
+      CircularProgressIndicator(
+        modifier = Modifier.semantics {
+          contentDescription = loadingLabel
+          liveRegion = LiveRegionMode.Polite
+        },
+      )
     }
   }
 }

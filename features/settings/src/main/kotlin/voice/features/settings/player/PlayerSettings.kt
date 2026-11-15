@@ -24,6 +24,7 @@ import dev.zacsweers.metro.Provides
 import voice.core.common.rootGraphAs
 import voice.core.online.OnlinePreloadSettings
 import voice.core.ui.icons.VoiceIcons
+import voice.features.settings.views.AutoRefreshWifiRow
 import voice.features.settings.views.AutoRewindAmountDialog
 import voice.features.settings.views.AutoRewindRow
 import voice.features.settings.views.OnlinePreloadEnabledRow
@@ -120,6 +121,13 @@ private fun PlayerSettings(
         OnlinePreloadEnabledRow(
           checked = viewState.onlinePreloadEnabled,
           onCheck = viewModel::setOnlinePreloadEnabled,
+        )
+      }
+
+      item {
+        AutoRefreshWifiRow(
+          checked = viewState.autoRefreshWifi,
+          onCheckedChange = viewModel::setAutoRefreshWifi,
         )
       }
     }

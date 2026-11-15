@@ -86,28 +86,61 @@ public class ExtensionManager(
       }
 
     val dir = packageDir(manifest.id)
+    // Leading dot keeps these out of the way of a legitimate package id such
+    // as "a.staging" (ids must start with a letter or digit).
+    val staging = File(dir.parentFile, ".${manifest.id}.staging")
+    val backup = File(dir.parentFile, ".${manifest.id}.backup")
     withContext(Dispatchers.IO) {
-      dir.deleteRecursively()
-      dir.mkdirs()
-      File(dir, JdrArchive.MANIFEST_ENTRY).writeText(
+      // Build the new version in a staging dir first. Deleting the live dir up
+      // front meant an IO failure (disk full / process killed) left a half
+      // written package while the registry still pointed at it.
+      staging.deleteRecursively()
+      if (!staging.mkdirs()) throw ExtensionInstallException("无法创建扩展目录")
+      File(staging, JdrArchive.MANIFEST_ENTRY).writeText(
         storeFactory.json.encodeToString(ExtensionManifest.serializer(), manifest),
         Charsets.UTF_8,
       )
       archive.scripts.forEach { (name, content) ->
-        File(dir, name).also { it.parentFile?.mkdirs() }.writeText(content, Charsets.UTF_8)
+        File(staging, name).also { it.parentFile?.mkdirs() }.writeText(content, Charsets.UTF_8)
       }
+
+      backup.deleteRecursively()
+      if (dir.exists() && !dir.renameTo(backup)) {
+        staging.deleteRecursively()
+        throw ExtensionInstallException("替换扩展文件失败，已保留原版本")
+      }
+      if (!staging.renameTo(dir)) {
+        // roll back so the previously installed version stays usable
+        backup.renameTo(dir)
+        staging.deleteRecursively()
+        throw ExtensionInstallException("替换扩展文件失败，已回滚到原版本")
+      }
+      backup.deleteRecursively()
     }
 
     packagesStore.updateData { packages ->
-      val existing = packages.firstOrNull { it.manifest.id == manifest.id }
+      val existingIndex = packages.indexOfFirst { it.manifest.id == manifest.id }
+      val existing = packages.getOrNull(existingIndex)
+      // Keep the user's ordering for sources that still exist and append new
+      // ones at the end, so updating a package never reshuffles the shelf.
+      val previousOrder = existing?.sourceOrder.orEmpty()
+      val order = previousOrder.filter { id -> manifest.sources.any { it.id == id } } +
+        manifest.sources.map { it.id }.filter { id -> id !in previousOrder }
       val merged = InstalledExtensionPackage(
         manifest = manifest,
         installedAtMillis = System.currentTimeMillis(),
         // keep enabled flags of sources that still exist; new sources start enabled
         sourceEnabled = existing?.sourceEnabled.orEmpty()
           .filterKeys { key -> manifest.sources.any { it.id == key } },
+        sourceOrder = order,
       )
-      listOf(merged) + packages.filterNot { it.manifest.id == manifest.id }
+      // Updating keeps the package where the user put it; a brand new package
+      // is appended at the end instead of jumping to the top.
+      if (existingIndex >= 0) {
+        packages.toMutableList().also { it[existingIndex] = merged }
+      } else {
+        packages + merged
+      }
     }
     return manifest
   }
@@ -157,10 +190,13 @@ public class ExtensionManager(
 
   public suspend fun uninstall(manifestId: String) {
     mutationMutex.withLock {
+      // Drop the registry entry first: a failed delete then only leaves
+      // orphaned bytes behind, instead of a package that is still listed but
+      // whose files are already gone.
+      packagesStore.updateData { packages -> packages.filterNot { it.manifest.id == manifestId } }
       withContext(Dispatchers.IO) {
         packageDir(manifestId).deleteRecursively()
       }
-      packagesStore.updateData { packages -> packages.filterNot { it.manifest.id == manifestId } }
     }
   }
 
@@ -177,6 +213,61 @@ public class ExtensionManager(
             pkg
           }
         }
+      }
+    }
+  }
+
+  /** Persists whether a package is expanded in the management screen. */
+  public suspend fun setPackageExpanded(manifestId: String, expanded: Boolean) {
+    mutationMutex.withLock {
+      packagesStore.updateData { packages ->
+        packages.map { pkg ->
+          if (pkg.manifest.id == manifestId) pkg.copy(expanded = expanded) else pkg
+        }
+      }
+    }
+  }
+
+  /**
+   * Flips [manifestId]'s expanded flag inside [DataStore.updateData], so two
+   * rapid taps can't both read the same stale value and cancel each other out.
+   */
+  public suspend fun togglePackageExpanded(manifestId: String) {
+    mutationMutex.withLock {
+      packagesStore.updateData { packages ->
+        packages.map { pkg ->
+          if (pkg.manifest.id == manifestId) pkg.copy(expanded = !pkg.expanded) else pkg
+        }
+      }
+    }
+  }
+
+  /**
+   * Replaces the source order of one package with [orderedIds]. Ids that no
+   * longer exist are dropped and unknown sources are appended, so a stale drag
+   * can never lose a source.
+   */
+  public suspend fun setSourceOrder(manifestId: String, orderedIds: List<String>) {
+    mutationMutex.withLock {
+      packagesStore.updateData { packages ->
+        packages.map { pkg ->
+          if (pkg.manifest.id != manifestId) return@map pkg
+          val known = pkg.manifest.sources.map { it.id }
+          val ordered = orderedIds.filter { it in known }
+          pkg.copy(sourceOrder = ordered + known.filter { it !in ordered })
+        }
+      }
+    }
+  }
+
+  /** Replaces the package order; unknown ids are ignored, missing ones appended. */
+  public suspend fun setPackageOrder(orderedManifestIds: List<String>) {
+    mutationMutex.withLock {
+      packagesStore.updateData { packages ->
+        val byId = packages.associateBy { it.manifest.id }
+        val ordered = orderedManifestIds.mapNotNull { byId[it] }
+        val placed = ordered.mapTo(HashSet()) { it.manifest.id }
+        ordered + packages.filter { it.manifest.id !in placed }
       }
     }
   }

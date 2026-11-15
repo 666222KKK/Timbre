@@ -18,6 +18,17 @@ public interface ExtensionOnlineSource {
   /** Enabled sources as search chips, with their `jdr:` prefixed names. */
   public suspend fun enabledSourceInfos(): List<OnlineSourceInfo>
 
+  /** Recommendation slots contributed by this backend. Default keeps
+   *  server-only backends and fakes source-compatible. */
+  public suspend fun recommendGroups(): List<OnlineRecommendGroup> = emptyList()
+
+  /** Loads books for one recommendation slot. */
+  public suspend fun browse(
+    source: String,
+    groupId: String,
+    page: Int,
+  ): List<OnlineSearchResult> = emptyList()
+
   public suspend fun search(
     source: String,
     keyword: String,

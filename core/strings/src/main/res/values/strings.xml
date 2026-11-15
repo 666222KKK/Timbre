@@ -222,13 +222,10 @@
     <string name="settings.analytics_consent.title">Analytics</string>
     <!-- Title for the dark theme setting. -->
     <!-- Settings row title for selecting the app color scheme. -->
-    <string name="settings.appearance.color_scheme.title">Color scheme</string>
     <!-- Label for selecting Android dynamic color as app color scheme. -->
-    <string name="settings.appearance.color_scheme.dynamic">Dynamic color</string>
     <!-- Description for Android dynamic color. -->
     <string name="settings.appearance.color_scheme.dynamic.summary">Uses colors from your wallpaper and system theme.</string>
     <!-- Label for selecting Voice blue as app color scheme. -->
-    <string name="settings.appearance.color_scheme.voice_blue">Timbre blue</string>
     <!-- Label for forcing dark mode. -->
     <string name="settings.appearance.theme.dark">Dark</string>
     <!-- Label for following the system light or dark setting. -->
@@ -248,9 +245,10 @@
     <!-- Settings row for opening the project's source code on GitHub. -->
     <string name="settings.github.title">Open source project</string>
     <!-- Summary text for the audiobook folders settings row. -->
-    <string name="settings.library.folders.summary">Manage folders scanned for audiobooks</string>
     <!-- Settings row for toggling grid layout in the library. -->
     <string name="settings.library.use_grid.title">Use grid layout</string>
+    <string name="settings.library.discover_page.title">Discover page</string>
+    <string name="settings.library.discover_page.summary">Swipe left on the shelf for Discover</string>
     <!-- Title for the setting that rewinds automatically when playback resumes. -->
     <string name="settings.playback.auto_rewind.title">Auto rewind</string>
     <!-- Title for the setting that controls skip-forward and rewind duration. -->
@@ -258,7 +256,6 @@
     <!-- Behavior of the previous/next media buttons (bluetooth, lock screen): chapter skip vs. seek. -->
     <string name="settings.playback.bt_skip_chapter.title">Bluetooth prev/next skips chapters</string>
     <string name="settings.playback.import_parallelism.title">Import parallelism</string>
-    <string name="settings.source_share.title">Shared sources</string>
     <string name="settings.online_source.title">Online book source</string>
     <string name="settings.online_source.summary">Search and stream audiobooks from your own download server. Off by default.</string>
     <string name="settings.online_source.base_url_title">Server address</string>
@@ -411,6 +408,18 @@
     <string name="sleep_timer.dialog.action.increment">Longer</string>
     <!-- Title of the sleep timer dialog. -->
     <string name="sleep_timer.dialog.title">Sweet dreams! 🌙</string>
+    <string name="sleep_timer.custom.title">Custom duration</string>
+    <string name="sleep_timer.custom.hint">Minutes</string>
+    <string name="a11y.slider.playback_progress">Playback progress</string>
+    <string name="a11y.slider.speed">Playback speed</string>
+    <string name="a11y.slider.skip_time">Skip duration</string>
+    <string name="a11y.slider.volume_gain">Volume gain</string>
+    <string name="a11y.slider.preload">Preload count</string>
+    <string name="a11y.slider.time">Time</string>
+    <string name="a11y.action.forward">Forward 30 seconds</string>
+    <string name="a11y.action.rewind">Rewind 30 seconds</string>
+    <string name="a11y.playback.state">Played %1$s of %2$s</string>
+    <string name="a11y.loading">Loading</string>
     <!-- Sleep timer option and playback status for stopping at the end of a chapter. -->
     <string name="sleep_timer.end_of_chapter">End of Chapter</string>
     <!-- Title of the dialog that shows the announcement written in announcement.txt. -->

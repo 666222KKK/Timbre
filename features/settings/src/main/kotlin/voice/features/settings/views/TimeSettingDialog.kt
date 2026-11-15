@@ -11,8 +11,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import kotlin.math.roundToInt
 import voice.core.strings.R as StringsR
 
@@ -41,7 +45,17 @@ fun TimeSettingDialog(
             sliderValue.roundToInt(),
           ),
         )
+        val timeLabel = stringResource(StringsR.string.a11y_slider_time)
+        val timeState = LocalResources.current.getQuantityString(
+          textPluralRes,
+          sliderValue.roundToInt(),
+          sliderValue.roundToInt(),
+        )
         Slider(
+          modifier = Modifier.semantics {
+            contentDescription = timeLabel
+            stateDescription = timeState
+          },
           valueRange = minSeconds.toFloat()..maxSeconds.toFloat(),
           value = sliderValue,
           onValueChange = {

@@ -2,8 +2,10 @@
 // Timbre 接口源开发模板（.jdr 扩展包）
 // ------------------------------------------------------------
 // 一个 .jdr 包 = ZIP 文件（后缀 .jdr），内含：
-//   manifest.json   包描述 + 源声明（见下方注释）
-//   yoursource.js   源脚本（可多个）
+//   manifest.json     包描述 + 源声明（见下方注释）
+//   yoursource.js     源脚本（可多个）
+//   yourrank.json     可选：推荐位独立配置（推荐，见 _template-rank.js）
+//   yourrank.js       可选：推荐脚本（不注册源，只挂全局函数）
 //
 // manifest.json 示例：
 // {
@@ -18,7 +20,11 @@
 //     "id": "mysource",                     // 全局唯一的源 id（路由键 jdr:mysource）
 //     "name": "我的源",                     // 搜索页 chip 上显示的名字
 //     "script": "yoursource.js",            // 包内脚本路径
-//     "capabilities": ["search", "chapters", "audio"]
+//     "capabilities": ["search", "chapters", "audio"],
+//     "description": "发现页上显示的源简介（可选）",
+//     // 推荐位（可选）：指向独立配置，总 manifest 只留这一行；
+//     // 也可以直接内联 "recommenders": [...], 两种写法二选一。
+//     "recommenderConfig": "yourrank.json"
 //   }]
 // }
 //
@@ -32,6 +38,16 @@
 //   params: search   = { keyword, page, limit }
 //           chapters = { bookId, page, size, ...search自定义字段 }
 //           audio    = { bookId, chapterId, ...chapters自定义字段 }
+//
+// 推荐位（发现页，可选）：
+//   推荐脚本是**独立文件**，不调用 registerSource()，只把一个 async 函数挂到
+//   globalThis，函数名与 yourrank.json 里的 entry 一致：
+//       globalThis.__rec_hot = async (params) => [ ...与 search 相同字段... ]
+//   宿主调用时 params = { groupId, page, limit }；失败直接 throw。
+//   yourrank.json 里每个推荐位可写 "cacheMinutes": 180 —— 有效期内再次点开
+//   直接用缓存、不发请求（0 或不写 = 该推荐位不缓存）。
+//   完整模板见 _template-rank.js。
+//
 // 出错直接 throw new Error('原因')，会显示在界面上。
 // ============================================================
 ;(function () {

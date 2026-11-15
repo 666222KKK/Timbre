@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -112,6 +113,33 @@ public class OnlineSourceService internal constructor(
     return withRelogin {
       client.searchSource(base, it, source, keyword)
     }
+  }
+
+  /** Recommendation slots from locally installed .jdr packages.
+   *  A broken backend must not hide the others. */
+  public suspend fun recommendGroups(): List<OnlineRecommendGroup> {
+    return extensionSources
+      .filter { it.hasEnabledSources() }
+      .flatMap { backend ->
+        try {
+          backend.recommendGroups()
+        } catch (e: CancellationException) {
+          throw e
+        } catch (e: Exception) {
+          emptyList()
+        }
+      }
+  }
+
+  /** Loads books for one recommendation slot. Errors surface to the UI
+   *  instead of being swallowed into an empty list. */
+  public suspend fun browse(
+    source: String,
+    groupId: String,
+    page: Int = 1,
+  ): List<OnlineSearchResult> {
+    val backend = extensionBackendFor(source) ?: return emptyList()
+    return backend.browse(source, groupId, page)
   }
 
   public suspend fun chapters(

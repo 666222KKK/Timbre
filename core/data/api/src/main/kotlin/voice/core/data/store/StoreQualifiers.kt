@@ -26,6 +26,10 @@ public annotation class SleepTimerPreferenceStore
 @Qualifier
 public annotation class GridModeStore
 
+/** Whether the shelf may be swiped left to reveal the discover page. */
+@Qualifier
+public annotation class DiscoverPageStore
+
 @Qualifier
 public annotation class ThemeModeStore
 

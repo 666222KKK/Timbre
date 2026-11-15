@@ -251,7 +251,8 @@ AI 会直接产出 `manifest.json` + 源脚本两个文件，按 [三步上手](
 | [extension-dev-guide.md](extension-dev-guide.md)              | **接口源开发指南**（主文档）：如何编写接口（含 Python→JS 对照、加密桥用法、防盗链头）、如何打包 .jdr、如何导入验证、常见坑 |
 | [abts-bili/](abts-bili/)                                      | **完整真实示例**：B站有声源（Cookie 风控预热 + Wbi 签名 + 防盗链 `{url, headers}`）——Web API 类站点的参考模板 |
 | [\_template.js](_template.js)                                 | **空白脚本模板**：复制它开始写你自己的接口，注释里有 manifest.json 的完整字段说明                  |
-| [demo-source/](demo-source/)                                  | **最小示例包**：一个只依赖普通 HTTP 接口的完整源（manifest.json + demo.js），演示标准字段与三阶段结构 |
+| [\_template-rank.js](_template-rank.js)                       | **推荐脚本模板**：发现页推荐位怎么写（独立脚本 + 独立 JSON 配置 + 缓存），不注册源                 |
+| [demo-source/](demo-source/)                                  | **最小示例包**：三阶段源 + 独立推荐配置（manifest.json / demo.js / demo_rank.json / demo_rank.js）   |
 | [../scripts/pack\_jdr.py](../scripts/pack_jdr.py)             | **打包脚本**（Python 版）：把目录压成 .jdr                                       |
 | [../scripts/pack\_jdr.main.kts](../scripts/pack_jdr.main.kts) | 打包脚本（Kotlin 版，二选一）                                                  |
 
@@ -262,7 +263,10 @@ AI 会直接产出 `manifest.json` + 源脚本两个文件，按 [三步上手](
    标准字段与三阶段的入参出参，见 [开发指南 · 契约对照](extension-dev-guide.md#一契约对照python--js)。
 2. **配 manifest**：包 id 与源 id 的规则、多接口合一的写法，  
    见 [开发指南 · 打包](extension-dev-guide.md#四打包成-jdr) 与 [demo-source/manifest.json](demo-source/manifest.json)。
-3. **打包导入**：`python scripts/pack_jdr.py 你的目录 输出.jdr`（或把目录压成 zip 改后缀），  
+3. **（可选）加发现页推荐位**：推荐脚本不注册源，只挂全局函数；配置放独立 JSON，  
+   源里只加一行 `"recommenderConfig": "xxx.json"`。模板见 [\_template-rank.js](_template-rank.js)，  
+   可运行示例见 [demo-source/demo_rank.json](demo-source/demo_rank.json)（`hot` 缓存 3 小时、`newest` 不缓存）。
+4. **打包导入**：`python scripts/pack_jdr.py 你的目录 输出.jdr`（或把目录压成 zip 改后缀），  
    播放器 **设置 → 接口源 → 导入 .jdr 文件 / 从链接导入**。
 
 ## 音频返回的三种形态（重要）
@@ -276,6 +280,51 @@ AI 会直接产出 `manifest.json` + 源脚本两个文件，按 [三步上手](
 遇到"搜索正常但播放 403"的站点，就是最后一种：参考 [abts-bili/abts.js](abts-bili/abts.js) 的  
 audio 阶段，把站点要求的 Referer/UA/Cookie 放进 `headers` 一起返回，其余交给播放器。  
 完整说明见 [开发指南 · 示例源C](extension-dev-guide.md#三五示例源-cb站有声web-api--wbi-签名--防盗链-referer-头)。
+
+## 推荐位（发现页）
+
+发现页的推荐位 = **独立推荐脚本** + **独立 JSON 配置**，主 manifest 只留一行引用，
+不会随着推荐位变多而膨胀：
+
+```json
+// manifest.json（源里只加这一行）
+{ "sources": [{ "id": "mysource", "script": "yoursource.js",
+                "recommenderConfig": "myrank.json" }] }
+```
+
+```json
+// myrank.json
+{
+  "script": "myrank.js",
+  "recommenders": [
+    { "id": "hot", "name": "热门榜单", "entry": "__rec_hot",
+      "description": "站内播放量最高", "cacheMinutes": 180 }
+  ]
+}
+```
+
+```js
+// myrank.js —— 不调用 registerSource，只挂全局函数
+globalThis.__rec_hot = async function (params) {
+  var resp = await http.get('https://api.example.com/rank', { timeoutMs: 15000 });
+  return (JSON.parse(resp.body).list || []).map(function (it) {
+    return { id: String(it.id), bookTitle: it.title, albumId: String(it.id) };
+  });
+};
+```
+
+要点：
+
+- `script` 在 JSON 顶部写一次，所有槽位继承；某个槽位要用别的脚本时单独写 `script` 覆盖
+- `entry` 是脚本里挂到 `globalThis` 的函数名，宿主调用时 `params = { groupId, page, limit }`
+- 返回值与 `search` 阶段**完全一致**；点击后走**主源**的 `chapters/audio`，
+  自定义字段（如 `albumId`）照常透传
+- `cacheMinutes` 按槽位配置：`180` = 3 小时内再点直接用缓存、不发任何请求；
+  `0` 或不写 = 该推荐位不缓存，每次实时拉取
+- 老的写法 `"recommenders": [...]` 直接内联在 manifest 里仍可用，两种二选一
+
+完整可运行示例见 [demo-source/](demo-source/)：`demo_rank.json` 里 `hot` 配了 3 小时缓存、
+`newest` 不缓存，`demo_rank.js` 一个脚本挂了两个推荐函数。
 
 ## 沙箱能力速览
 
@@ -296,3 +345,6 @@ audio 阶段，把站点要求的 Referer/UA/Cookie 放进 `headers` 一起返�
 - 包 id（`manifest.id`）可以随意改（小写字母/数字/`._-`），同名包重复导入 = 更新。
 - 两个源可以封装进**同一个 .jdr**（`sources` 数组多项、多个脚本文件），参考指南打包一节。
 - 源站证书链损坏时，在 manifest 里加 `"allowInsecure": true`（只影响该包）。
+- 用 `scripts/pack_jdr.py` 打包会做静态校验：主脚本是否存在、`registerSource` 的 id 是否与
+  manifest 一致、`recommenderConfig` 是否进包、推荐位的 `entry`/`cacheMinutes` 是否合法，
+  能提前挡住大部分导入失败（Kotlin 版脚本只打包、不校验）。

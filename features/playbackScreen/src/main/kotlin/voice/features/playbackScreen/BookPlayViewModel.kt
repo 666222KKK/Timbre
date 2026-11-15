@@ -258,7 +258,15 @@ class BookPlayViewModel(
     }
 
     val sleepTime = remember { sleepTimer.state }.collectAsState().value
-    val hasMoreThanOneChapter = book.chapters.sumOf { it.chapterMarks.count() } > 1
+    // This runs on every position tick (2.5 Hz) during composition. Summing
+    // every mark of every chapter was O(chapters) per tick, which stutters on
+    // books with thousands of chapters; two marks already settle the answer.
+    var markCount = 0
+    for (chapter in book.chapters) {
+      markCount += chapter.chapterMarks.size
+      if (markCount > 1) break
+    }
+    val hasMoreThanOneChapter = markCount > 1
     return BookPlayViewState(
       sleepTimerState = sleepTime.toViewState(),
       playing = isPlaying,
@@ -299,28 +307,13 @@ class BookPlayViewModel(
     sourceError.value = null
   }
 
-  fun incrementSleepTime() {
-    updateSleepTimeViewState {
-      val customTime = it.customSleepTime
-      val newTime = customTime + 1
-      sleepTimerPreferenceStore.updateData { preference -> preference.copy(duration = newTime.minutes) }
-      SleepTimerViewState(newTime)
-    }
-  }
-
-  fun decrementSleepTime() {
-    updateSleepTimeViewState {
-      val customTime = it.customSleepTime
-      val newTime = (customTime - 1).coerceAtLeast(1)
-      sleepTimerPreferenceStore.updateData { preference ->
-        preference.copy(duration = newTime.minutes)
-      }
-      SleepTimerViewState(newTime)
-    }
-  }
-
   fun onAcceptSleepTime(time: Int) {
     updateSleepTimeViewState {
+      // Remember the duration the user picked (preset or custom) so the custom
+      // row shows it next time instead of resetting to the default.
+      sleepTimerPreferenceStore.updateData { preference ->
+        preference.copy(duration = time.minutes)
+      }
       val book = currentBook() ?: return@updateSleepTimeViewState null
       scope.launch {
         bookmarkRepository.addBookmarkAtBookPosition(
@@ -571,3 +564,4 @@ private fun SleepTimerState.toViewState(): BookPlayViewState.SleepTimerViewState
  * that hangs keeps the ring on instead of looking like a pause.
  */
 private const val WAITING_FOR_AUDIO_GRACE_MS = 700L
+

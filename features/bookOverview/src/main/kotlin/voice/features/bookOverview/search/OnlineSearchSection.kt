@@ -3,10 +3,10 @@ package voice.features.bookOverview.search
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +21,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -213,7 +215,7 @@ internal fun OnlineSearchSection(
 }
 
 @Composable
-private fun OnlineResultRow(
+internal fun OnlineResultRow(
   result: OnlineSearchResult,
   onClick: () -> Unit,
 ) {
@@ -257,7 +259,7 @@ private data class ChaptersUiState(
 )
 
 @Composable
-private fun OnlineChaptersDialog(
+internal fun OnlineChaptersDialog(
   service: OnlineSourceService,
   catalog: OnlinePlaybackCatalog,
   book: OnlineSearchResult,
@@ -267,6 +269,9 @@ private fun OnlineChaptersDialog(
   var reloadKey by remember { mutableIntStateOf(0) }
   val scope = rememberCoroutineScope()
   val context = LocalContext.current
+  // A system Toast gets the app icon stamped on Android 12+, so the hint is
+  // shown as an in-dialog snackbar instead.
+  val snackbarHostState = remember { SnackbarHostState() }
   // shelf membership is explicit: the dialog checks the stored books once and
   // the button toggles add/remove; tapping a chapter only starts playback
   val shelfKey = OnlineBookRef(book.source, book.bookId).key
@@ -306,7 +311,7 @@ private fun OnlineChaptersDialog(
     if (shelfState == true) {
       playFromChapter(chapters, chapter)
     } else {
-      Toast.makeText(context, joinShelfFirst, Toast.LENGTH_SHORT).show()
+      scope.launch { snackbarHostState.showSnackbar(joinShelfFirst) }
     }
   }
   fun toggleShelf(chapters: List<OnlineChapter>) {
@@ -345,6 +350,8 @@ private fun OnlineChaptersDialog(
     onDismissRequest = onDismiss,
     title = { Text(book.title, maxLines = 3, overflow = TextOverflow.Ellipsis) },
     text = {
+      Box(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth()) {
       if (state.loading) {
         Column(
           modifier = Modifier
@@ -478,6 +485,14 @@ private fun OnlineChaptersDialog(
             }
           }
         }
+      }
+        }
+        SnackbarHost(
+          hostState = snackbarHostState,
+          modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(top = 8.dp),
+        )
       }
     },
     confirmButton = {

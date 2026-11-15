@@ -15,16 +15,14 @@ import voice.core.common.AppInfoProvider
 import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
 import voice.core.data.GridMode
-import voice.core.data.ThemeColorScheme
 import voice.core.data.ThemeMode
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.data.store.AnalyticsConsentStore
 import voice.core.data.store.DeveloperMenuUnlockedStore
+import voice.core.data.store.DiscoverPageStore
 import voice.core.data.store.GridModeStore
 import voice.core.data.store.SleepTimerPreferenceStore
-import voice.core.data.store.ThemeColorSchemeStore
 import voice.core.data.store.ThemeModeStore
-import voice.core.data.store.WebDavAutoRefreshWifiStore
 import voice.core.featureflag.FeatureFlag
 import voice.core.featureflag.KioskModeFeatureFlagQualifier
 import voice.core.online.OnlineSourceBaseUrlStore
@@ -32,7 +30,6 @@ import voice.core.online.OnlineSourceCredentialStore
 import voice.core.online.OnlineSourceEnabledStore
 import voice.core.online.OnlineSourceException
 import voice.core.online.OnlineSourceService
-import voice.core.ui.DynamicColorAvailability
 import voice.core.ui.GridCount
 import voice.core.update.UpdateNotifier
 import voice.navigation.Destination
@@ -45,12 +42,12 @@ import voice.core.strings.R as StringsR
 class SettingsViewModel(
   @ThemeModeStore
   private val themeModeStore: DataStore<ThemeMode>,
-  @ThemeColorSchemeStore
-  private val themeColorSchemeStore: DataStore<ThemeColorScheme>,
   private val navigator: Navigator,
   private val appInfoProvider: AppInfoProvider,
   @GridModeStore
   private val gridModeStore: DataStore<GridMode>,
+  @DiscoverPageStore
+  private val discoverPageStore: DataStore<Boolean>,
   @SleepTimerPreferenceStore
   private val sleepTimerPreferenceStore: DataStore<SleepTimerPreference>,
   @AnalyticsConsentStore
@@ -60,8 +57,6 @@ class SettingsViewModel(
   private val kioskModeFeatureFlag: FeatureFlag<Boolean>,
   @DeveloperMenuUnlockedStore
   private val developerMenuUnlockedStore: DataStore<Boolean>,
-  @WebDavAutoRefreshWifiStore
-  private val autoRefreshWifiStore: DataStore<Boolean>,
   @OnlineSourceEnabledStore
   private val onlineSourceEnabledStore: DataStore<Boolean>,
   @OnlineSourceBaseUrlStore
@@ -69,7 +64,6 @@ class SettingsViewModel(
   @OnlineSourceCredentialStore
   private val onlineSourceCredentialStore: DataStore<String>,
   private val onlineSourceService: OnlineSourceService,
-  private val dynamicColorAvailability: DynamicColorAvailability,
   private val updateNotifier: UpdateNotifier,
   dispatcherProvider: DispatcherProvider,
 ) : SettingsListener {
@@ -86,8 +80,8 @@ class SettingsViewModel(
   @Composable
   fun viewState(): SettingsViewState {
     val themeMode by remember { themeModeStore.data }.collectAsState(initial = ThemeMode.FollowSystem)
-    val themeColorScheme by remember { themeColorSchemeStore.data }.collectAsState(initial = ThemeColorScheme.VoiceBlue)
     val gridMode by remember { gridModeStore.data }.collectAsState(initial = GridMode.GRID)
+    val discoverPageEnabled by remember { discoverPageStore.data }.collectAsState(initial = true)
     val autoSleepTimer by remember { sleepTimerPreferenceStore.data }.collectAsState(
       initial = SleepTimerPreference.Default,
     )
@@ -96,20 +90,14 @@ class SettingsViewModel(
       kioskModeFeatureFlag.get()
     }
     val showDeveloperMenu by remember { developerMenuUnlockedStore.data }.collectAsState(initial = false)
-    val autoRefreshWifi by remember { autoRefreshWifiStore.data }.collectAsState(initial = true)
     val onlineSourceEnabled by remember { onlineSourceEnabledStore.data }.collectAsState(initial = false)
     val onlineSourceBaseUrl by remember { onlineSourceBaseUrlStore.data }.collectAsState(initial = "")
     val onlineSourceCredential by remember { onlineSourceCredentialStore.data }.collectAsState(initial = "")
     val onlineSourceVerifying = onlineSourceVerifyState.value
     val onlineSourceVerifyError = onlineSourceVerifyError.value
     val update by updateNotifier.update.collectAsState()
-    val showThemeColorSchemePref = remember {
-      dynamicColorAvailability.isSupported()
-    }
     return SettingsViewState(
       themeMode = themeMode,
-      themeColorScheme = themeColorScheme,
-      showThemeColorSchemePref = showThemeColorSchemePref,
       dialog = dialog.value,
       appVersion = appInfoProvider.versionName,
       availableUpdate = update,
@@ -118,6 +106,7 @@ class SettingsViewModel(
         GridMode.GRID -> true
         GridMode.FOLLOW_DEVICE -> gridCount.useGridAsDefault()
       },
+      discoverPageEnabled = discoverPageEnabled,
       autoSleepTimer = SettingsViewState.AutoSleepTimerViewState(
         enabled = autoSleepTimer.autoSleepTimerEnabled,
         startTime = autoSleepTimer.autoSleepStartTime,
@@ -126,7 +115,6 @@ class SettingsViewModel(
       analyticsEnabled = analyticsEnabled,
       showAnalyticSetting = appInfoProvider.analyticsIncluded,
       showDeveloperMenu = showDeveloperMenu,
-      autoRefreshWifi = autoRefreshWifi,
       onlineSourceEnabled = onlineSourceEnabled,
       onlineSourceBaseUrl = onlineSourceBaseUrl,
       onlineSourceCredential = onlineSourceCredential,
@@ -148,10 +136,6 @@ class SettingsViewModel(
     dialog.value = SettingsViewState.Dialog.Theme
   }
 
-  override fun onThemeColorSchemeRowClick() {
-    dialog.value = SettingsViewState.Dialog.ColorScheme
-  }
-
   override fun setThemeMode(themeMode: ThemeMode) {
     mainScope.launch {
       themeModeStore.updateData { themeMode }
@@ -159,11 +143,10 @@ class SettingsViewModel(
     dialog.value = null
   }
 
-  override fun setThemeColorScheme(themeColorScheme: ThemeColorScheme) {
+  override fun toggleDiscoverPage() {
     mainScope.launch {
-      themeColorSchemeStore.updateData { themeColorScheme }
+      discoverPageStore.updateData { enabled -> !enabled }
     }
-    dialog.value = null
   }
 
   override fun toggleGrid() {
@@ -190,16 +173,8 @@ class SettingsViewModel(
     navigator.goTo(Destination.Website("https://github.com/cq10086123/Timbre"))
   }
 
-  override fun openSourceShare() {
-    navigator.goTo(Destination.Website("https://cq10086123.github.io/Timbre/share.html"))
-  }
-
   override fun openSupportVoice() {
     navigator.goTo(Destination.SupportVoice)
-  }
-
-  override fun openFolderPicker() {
-    navigator.goTo(Destination.FolderPicker)
   }
 
   override fun openWebDav() {
@@ -208,12 +183,6 @@ class SettingsViewModel(
 
   override fun openExtensions() {
     navigator.goTo(Destination.ExtensionSources)
-  }
-
-  override fun setAutoRefreshWifi(checked: Boolean) {
-    mainScope.launch {
-      autoRefreshWifiStore.updateData { checked }
-    }
   }
 
   override fun setOnlineSourceEnabled(checked: Boolean) {

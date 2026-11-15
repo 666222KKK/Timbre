@@ -10,6 +10,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import voice.core.strings.R as StringsR
@@ -58,7 +61,13 @@ private fun SkipTimeRow(
     Text(text = stringResource(id = labelRes) + ": " + skipTimeFormatted(seconds))
     // No `steps`: with a one second granularity over two minutes the tick marks would blur into a
     // solid line, so the thumb moves freely and the value snaps to whole seconds instead.
+    val sliderLabel = stringResource(id = labelRes)
+    val sliderState = skipTimeFormatted(seconds)
     Slider(
+      modifier = Modifier.semantics {
+        contentDescription = sliderLabel
+        stateDescription = sliderState
+      },
       value = seconds.toFloat().coerceIn(0F, SKIP_TIME_MAX_SECONDS.toFloat()),
       valueRange = 0F..SKIP_TIME_MAX_SECONDS.toFloat(),
       onValueChange = { value ->

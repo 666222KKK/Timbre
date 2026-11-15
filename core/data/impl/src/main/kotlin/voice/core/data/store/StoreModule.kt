@@ -163,6 +163,13 @@ public interface StoreModule {
 
   @Provides
   @SingleIn(AppScope::class)
+  @DiscoverPageStore
+  private fun discoverPage(factory: VoiceDataStoreFactory): DataStore<Boolean> {
+    return factory.boolean("discoverPageEnabled", defaultValue = true)
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
   @OnboardingCompletedStore
   private fun onboardingCompleted(factory: VoiceDataStoreFactory): DataStore<Boolean> {
     return factory.boolean("onboardingCompleted", defaultValue = false)
