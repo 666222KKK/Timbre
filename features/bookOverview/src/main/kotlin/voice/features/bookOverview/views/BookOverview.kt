@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -151,7 +152,7 @@ fun BookOverviewScreen(modifier: Modifier = Modifier) {
     onSearchBookClick = bookOverviewViewModel::onSearchBookClick,
     onClearSearchHistory = bookOverviewViewModel::onClearSearchHistory,
     onPermissionBugCardClick = bookOverviewViewModel::onPermissionBugCardClick,
-    onDiscoverHintShown = bookOverviewViewModel::onDiscoverHintShown,
+    onDiscoverHintShow = bookOverviewViewModel::onDiscoverHintShown,
   )
   val deleteBookViewState = deleteBookViewModel.state.value
   if (deleteBookViewState != null) {
@@ -278,7 +279,7 @@ internal fun BookOverview(
   onSearchBookClick: (BookId) -> Unit,
   onClearSearchHistory: () -> Unit,
   onPermissionBugCardClick: () -> Unit,
-  onDiscoverHintShown: () -> Unit,
+  onDiscoverHintShow: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -390,7 +391,7 @@ internal fun BookOverview(
         )
         if (viewState.showDiscoverHint) {
           DiscoverSwipeHint(
-            onShown = onDiscoverHintShown,
+            onShow = onDiscoverHintShow,
             modifier = Modifier
               .align(Alignment.BottomCenter)
               .navigationBarsPadding()
@@ -469,14 +470,15 @@ private fun PagerIsland(
 /** One-shot bubble above the ticks: shown once, then never again. */
 @Composable
 private fun DiscoverSwipeHint(
-  onShown: () -> Unit,
+  onShow: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
+  val currentOnShow by rememberUpdatedState(onShow)
   var visible by remember { mutableStateOf(true) }
   LaunchedEffect(Unit) {
     delay(2500)
     visible = false
-    onShown()
+    currentOnShow()
   }
   AnimatedVisibility(
     visible = visible,
@@ -520,7 +522,7 @@ fun BookOverviewPreview(
       onSearchBookClick = {},
       onClearSearchHistory = {},
       onPermissionBugCardClick = {},
-      onDiscoverHintShown = {},
+      onDiscoverHintShow = {},
     )
   }
 }

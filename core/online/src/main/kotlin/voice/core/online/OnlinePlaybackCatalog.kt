@@ -362,8 +362,6 @@ public class OnlinePlaybackCatalog(
     }
   }
 
-  /** The last playback position of an online book, so the UI can resume it. */
-
   /**
    * The most recent playback position kept in memory, ahead of the throttled
    * persistence. Read by surfaces that poll, like the home screen widget.
