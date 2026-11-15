@@ -97,6 +97,7 @@ class BookOverviewViewModelTest {
       currentBookStoreDataStore = MemoryDataStore(null),
       gridModeStore = MemoryDataStore(GridMode.LIST),
       discoverPageStore = MemoryDataStore(true),
+      discoverHintShownStore = MemoryDataStore(false),
       gridCount = mockk<GridCount> {
         every { useGridAsDefault() } returns false
       },
@@ -186,6 +187,7 @@ class BookOverviewViewModelTest {
       currentBookStoreDataStore = MemoryDataStore(currentBook.id),
       gridModeStore = MemoryDataStore(GridMode.LIST),
       discoverPageStore = MemoryDataStore(true),
+      discoverHintShownStore = MemoryDataStore(false),
       gridCount = mockk<GridCount> {
         every { useGridAsDefault() } returns false
       },
@@ -368,6 +370,7 @@ class BookOverviewViewModelTest {
       currentBookStoreDataStore = MemoryDataStore(null),
       gridModeStore = MemoryDataStore(GridMode.LIST),
       discoverPageStore = MemoryDataStore(true),
+      discoverHintShownStore = MemoryDataStore(false),
       gridCount = mockk<GridCount> {
         every { useGridAsDefault() } returns false
       },
@@ -478,6 +481,7 @@ class BookOverviewViewModelTest {
       currentBookStoreDataStore = MemoryDataStore(null),
       gridModeStore = MemoryDataStore(GridMode.LIST),
       discoverPageStore = MemoryDataStore(true),
+      discoverHintShownStore = MemoryDataStore(false),
       gridCount = mockk<GridCount> {
         every { useGridAsDefault() } returns false
       },

@@ -2,21 +2,28 @@ package voice.features.bookOverview.views
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -39,7 +46,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
@@ -49,6 +62,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import voice.core.common.rootGraphAs
 import voice.core.data.BookId
@@ -74,6 +88,9 @@ import voice.features.bookOverview.views.topbar.BookOverviewTopBar
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
 import kotlin.uuid.Uuid
+import voice.core.strings.R as StringsR
+import voice.core.strings.R as StringsRParameter
+import voice.core.strings.R as StringsRParameterProvider
 
 @ContributesTo(AppScope::class)
 interface BookOverviewProvider {
@@ -134,6 +151,7 @@ fun BookOverviewScreen(modifier: Modifier = Modifier) {
     onSearchBookClick = bookOverviewViewModel::onSearchBookClick,
     onClearSearchHistory = bookOverviewViewModel::onClearSearchHistory,
     onPermissionBugCardClick = bookOverviewViewModel::onPermissionBugCardClick,
+    onDiscoverHintShown = bookOverviewViewModel::onDiscoverHintShown,
   )
   val deleteBookViewState = deleteBookViewModel.state.value
   if (deleteBookViewState != null) {
@@ -260,6 +278,7 @@ internal fun BookOverview(
   onSearchBookClick: (BookId) -> Unit,
   onClearSearchHistory: () -> Unit,
   onPermissionBugCardClick: () -> Unit,
+  onDiscoverHintShown: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -356,8 +375,8 @@ internal fun BookOverview(
           )
         }
       }
-      // The pill only advertises the discover page; with the page disabled the
-      // pager has a single page and the hint would be misleading.
+      // The indicator only exists while the discover page is reachable; with
+      // the page disabled the pager has a single page and it would be a lie.
       if (!viewState.searchActive && viewState.discoverPageEnabled) {
         PagerIsland(
           currentPage = pagerState.currentPage,
@@ -367,52 +386,113 @@ internal fun BookOverview(
           modifier = Modifier
             .align(Alignment.BottomCenter)
             .navigationBarsPadding()
-            .padding(bottom = 20.dp),
+            .padding(bottom = 8.dp),
         )
+        if (viewState.showDiscoverHint) {
+          DiscoverSwipeHint(
+            onShown = onDiscoverHintShown,
+            modifier = Modifier
+              .align(Alignment.BottomCenter)
+              .navigationBarsPadding()
+              .padding(bottom = 52.dp),
+          )
+        }
       }
     }
   }
 }
 
-/** Bottom-center pill that makes the two-page pager discoverable and tappable. */
+/**
+ * Two ticks at the bottom edge: the active one is wider and tinted. Sits at
+ * 55% opacity while idle and only fully appears on press, so it reads as a page
+ * indicator rather than a floating control. The visual is 3dp tall but the
+ * touch target stays 44dp.
+ */
 @Composable
 private fun PagerIsland(
   currentPage: Int,
   onToggle: (Int) -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val onDiscover = currentPage == 1
-  Surface(
+  val interaction = remember { MutableInteractionSource() }
+  val pressed by interaction.collectIsPressedAsState()
+  val alpha by animateFloatAsState(
+    targetValue = if (pressed) 1f else 0.55f,
+    label = "pagerIndicatorAlpha",
+  )
+  val label = stringResource(
+    if (currentPage == 1) StringsR.string.overview_page_discover else StringsR.string.overview_page_shelf,
+  )
+  Box(
     modifier = modifier
-      .clip(RoundedCornerShape(percent = 50))
-      .clickable { onToggle(if (onDiscover) 0 else 1) },
-    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
-    tonalElevation = 3.dp,
+      .height(44.dp)
+      .semantics {
+        role = Role.Tab
+        contentDescription = label
+      }
+      .clickable(
+        interactionSource = interaction,
+        indication = null,
+      ) {
+        onToggle(if (currentPage == 1) 0 else 1)
+      },
+    contentAlignment = Alignment.Center,
   ) {
     Row(
-      modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      modifier = Modifier.graphicsLayer { this.alpha = alpha },
+      horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
       repeat(2) { index ->
         val active = index == currentPage
+        val width by animateDpAsState(
+          targetValue = if (active) 28.dp else 20.dp,
+          label = "pagerIndicatorWidth",
+        )
         Box(
           Modifier
-            .size(if (active) 8.dp else 6.dp)
-            .clip(CircleShape)
+            .width(width)
+            .height(3.dp)
+            .clip(RoundedCornerShape(1.5.dp))
             .background(
               if (active) {
-                MaterialTheme.colorScheme.primary
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
               } else {
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f)
               },
             ),
         )
       }
+    }
+  }
+}
+
+/** One-shot bubble above the ticks: shown once, then never again. */
+@Composable
+private fun DiscoverSwipeHint(
+  onShown: () -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  var visible by remember { mutableStateOf(true) }
+  LaunchedEffect(Unit) {
+    delay(2500)
+    visible = false
+    onShown()
+  }
+  AnimatedVisibility(
+    visible = visible,
+    enter = fadeIn(),
+    exit = fadeOut(),
+    modifier = modifier,
+  ) {
+    Surface(
+      shape = RoundedCornerShape(percent = 50),
+      color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+    ) {
       Text(
-        text = if (onDiscover) "发现 · 右滑回书架" else "书架 · 左滑看发现",
+        text = "向左滑，发现更多",
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
       )
     }
   }
@@ -440,6 +520,7 @@ fun BookOverviewPreview(
       onSearchBookClick = {},
       onClearSearchHistory = {},
       onPermissionBugCardClick = {},
+      onDiscoverHintShown = {},
     )
   }
 }

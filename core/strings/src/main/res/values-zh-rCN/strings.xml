@@ -91,6 +91,10 @@
     <string name="settings.about.app_version.title">软件版本</string>
     <string name="settings.action.open">偏好设置</string>
     <string name="settings.library.use_grid.title">使用网格布局</string>
+    <string name="widget.empty.title">还没有在听的书</string>
+    <string name="widget.empty.summary">点一下打开书架</string>
+    <string name="overview_page_shelf">书架</string>
+    <string name="overview_page_discover">发现页</string>
     <string name="settings.library.discover_page.title">发现页</string>
     <string name="settings.library.discover_page.summary">书架左滑打开发现页</string>
     <string name="settings.playback.auto_rewind.title">自动回退</string>
@@ -390,6 +394,7 @@
     <string name="extensions_uninstall_confirm">确定卸载该扩展包吗？其源将从搜索中移除；已加入书架的书籍在删除前仍可播放。</string>
     <string name="settings_extensions_title">接口源</string>
     <string name="settings_extensions_summary">导入和管理 .jdr 接口源</string>
+    <string name="folder_add_type_enter">直接进入</string>
     <string name="folder_add_type_source">导入书源</string>
     <string name="folder_add_source_title">导入书源</string>
     <string name="folder_add_source_url_hint">书源链接（https://…/xxx.jdr）</string>

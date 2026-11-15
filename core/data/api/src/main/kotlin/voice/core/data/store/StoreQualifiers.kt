@@ -30,6 +30,10 @@ public annotation class GridModeStore
 @Qualifier
 public annotation class DiscoverPageStore
 
+/** One-shot flag: the "swipe left for discover" hint was already shown. */
+@Qualifier
+public annotation class DiscoverHintShownStore
+
 @Qualifier
 public annotation class ThemeModeStore
 

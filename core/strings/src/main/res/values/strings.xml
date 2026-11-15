@@ -246,6 +246,10 @@
     <!-- Summary text for the audiobook folders settings row. -->
     <!-- Settings row for toggling grid layout in the library. -->
     <string name="settings.library.use_grid.title">Use grid layout</string>
+    <string name="widget.empty.title">Nothing playing</string>
+    <string name="widget.empty.summary">Tap to open your shelf</string>
+    <string name="overview_page_shelf">Shelf</string>
+    <string name="overview_page_discover">Discover</string>
     <string name="settings.library.discover_page.title">Discover page</string>
     <string name="settings.library.discover_page.summary">Swipe left on the shelf for Discover</string>
     <!-- Title for the setting that rewinds automatically when playback resumes. -->
@@ -543,6 +547,7 @@
     <string name="extensions_uninstall_confirm">Uninstall this package? Its sources disappear from search; books already on the shelf keep working until removed.</string>
     <string name="settings_extensions_title">Extension sources</string>
     <string name="settings_extensions_summary">Import and manage .jdr interface sources</string>
+    <string name="folder_add_type_enter">Skip &amp; enter</string>
     <string name="folder_add_type_source">Import source</string>
     <string name="folder_add_source_title">Import source</string>
     <string name="folder_add_source_url_hint">Source link (https://…/source.jdr)</string>
