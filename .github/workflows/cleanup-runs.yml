@@ -1,21 +1,14 @@
 name: Cleanup workflow runs
 
-# Runs after every CI completion: old run records (and their logs/artifacts)
-# accumulate forever otherwise, and there is no repository setting that trims
-# the run history itself.
-#
-# Manual use: Actions -> "Cleanup workflow runs" -> Run workflow, set keep to 0
-# to wipe the whole history.
+# Keeps the Actions history empty: every finished CI run deletes the previous
+# ones so the list never grows. Failing runs are the exception - they stay
+# visible until a later run succeeds, so a broken build can still be inspected
+# while it is being fixed.
 on:
   workflow_run:
     workflows: ["CI"]
     types: [completed]
   workflow_dispatch:
-    inputs:
-      keep:
-        description: "How many recent runs to keep (0 deletes everything)"
-        required: false
-        default: "20"
 
 permissions:
   actions: write
@@ -28,20 +21,21 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Delete old runs
+      - name: Delete previous runs
         uses: actions/github-script@v7
         with:
           script: |
-            // workflow_run has no inputs: fall back to the scheduled policy.
-            const requested = Number(github.context.payload.inputs?.keep ?? 20);
-            const keep = Number.isFinite(requested) ? Math.max(0, requested) : 20;
+            // workflow_dispatch has no trigger run: treat it as a successful
+            // run, i.e. wipe everything.
+            const trigger = github.context.payload.workflow_run;
+            const ciFailed = trigger?.conclusion === 'failure';
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            core.info(`keeping the latest ${keep} runs`);
+            core.info(ciFailed ? 'CI failed: keeping failed runs' : 'CI passed: clearing history');
 
-            // One page holds at most 100 runs, so a large backlog needs
-            // several rounds before the history is actually down to `keep`.
+            // One page holds at most 100 runs; loop until nothing removable is
+            // left so a large backlog is cleared in a single cleanup.
             let deleted = 0;
             for (let round = 0; round < 50; round++) {
               const { data } = await github.rest.actions.listWorkflowRunsForRepo({
@@ -50,12 +44,16 @@ jobs:
                 per_page: 100,
               });
 
-              const stale = data.workflow_runs
-                .filter((run) => run.id !== context.runId)
-                .slice(keep);
+              const stale = data.workflow_runs.filter((run) => {
+                // Never delete the cleanup run itself.
+                if (run.id === context.runId) return false;
+                // While the build is broken, keep the failures for inspection.
+                if (ciFailed && run.conclusion === 'failure') return false;
+                return true;
+              });
 
               if (stale.length === 0) {
-                core.info(`history trimmed to ${data.workflow_runs.length} runs`);
+                core.info(`done, ${data.workflow_runs.length} runs left`);
                 break;
               }
 
@@ -75,10 +73,9 @@ jobs:
               }
 
               deleted += deletedThisRound;
-              // Nothing removable in this round: stop instead of spinning.
               if (deletedThisRound === 0) {
                 core.warning(`nothing deletable in round ${round + 1}, stopping`);
                 break;
               }
             }
-            core.info(`deleted ${deleted} stale runs`);
+            core.info(`deleted ${deleted} runs`);
