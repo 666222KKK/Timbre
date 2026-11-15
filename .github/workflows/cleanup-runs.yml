@@ -3,11 +3,19 @@ name: Cleanup workflow runs
 # Runs after every CI completion: old run records (and their logs/artifacts)
 # accumulate forever otherwise, and there is no repository setting that trims
 # the run history itself.
+#
+# Manual use: Actions -> "Cleanup workflow runs" -> Run workflow, set keep to 0
+# to wipe the whole history.
 on:
   workflow_run:
     workflows: ["CI"]
     types: [completed]
   workflow_dispatch:
+    inputs:
+      keep:
+        description: "How many recent runs to keep (0 deletes everything)"
+        required: false
+        default: "20"
 
 permissions:
   actions: write
@@ -20,18 +28,22 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Delete old runs, keep the latest 20
+      - name: Delete old runs
         uses: actions/github-script@v7
         with:
           script: |
-            const keep = 20;
+            // workflow_run has no inputs: fall back to the scheduled policy.
+            const requested = Number(github.context.payload.inputs?.keep ?? 20);
+            const keep = Number.isFinite(requested) ? Math.max(0, requested) : 20;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
+
+            core.info(`keeping the latest ${keep} runs`);
 
             // One page holds at most 100 runs, so a large backlog needs
             // several rounds before the history is actually down to `keep`.
             let deleted = 0;
-            for (let round = 0; round < 20; round++) {
+            for (let round = 0; round < 50; round++) {
               const { data } = await github.rest.actions.listWorkflowRunsForRepo({
                 owner,
                 repo,
