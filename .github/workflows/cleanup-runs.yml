@@ -27,7 +27,7 @@ jobs:
           script: |
             // workflow_dispatch has no trigger run: treat it as a successful
             // run, i.e. wipe everything.
-            const trigger = github.context.payload.workflow_run;
+            const trigger = context.payload.workflow_run;
             const ciFailed = trigger?.conclusion === 'failure';
             const owner = context.repo.owner;
             const repo = context.repo.repo;
