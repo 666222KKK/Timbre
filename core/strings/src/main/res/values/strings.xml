@@ -224,7 +224,6 @@
     <!-- Settings row title for selecting the app color scheme. -->
     <!-- Label for selecting Android dynamic color as app color scheme. -->
     <!-- Description for Android dynamic color. -->
-    <string name="settings.appearance.color_scheme.dynamic.summary">Uses colors from your wallpaper and system theme.</string>
     <!-- Label for selecting Voice blue as app color scheme. -->
     <!-- Label for forcing dark mode. -->
     <string name="settings.appearance.theme.dark">Dark</string>
@@ -403,16 +402,13 @@
     <!-- Content description for opening the sleep timer. -->
     <string name="sleep_timer.action.open">Sleep-Timer</string>
     <!-- Content description for decreasing the sleep timer duration. -->
-    <string name="sleep_timer.dialog.action.decrement">Shorter</string>
     <!-- Content description for increasing the sleep timer duration. -->
-    <string name="sleep_timer.dialog.action.increment">Longer</string>
     <!-- Title of the sleep timer dialog. -->
     <string name="sleep_timer.dialog.title">Sweet dreams! 🌙</string>
     <string name="sleep_timer.custom.title">Custom duration</string>
     <string name="sleep_timer.custom.hint">Minutes</string>
     <string name="a11y.slider.playback_progress">Playback progress</string>
     <string name="a11y.slider.speed">Playback speed</string>
-    <string name="a11y.slider.skip_time">Skip duration</string>
     <string name="a11y.slider.volume_gain">Volume gain</string>
     <string name="a11y.slider.preload">Preload count</string>
     <string name="a11y.slider.time">Time</string>

@@ -243,7 +243,6 @@
     <string name="review.request.title">喜欢 Timbre 吗？</string>
     <string name="settings.analytics_consent.description">允许收集匿名使用数据，帮助改进应用</string>
     <string name="settings.analytics_consent.title">匿名统计</string>
-    <string name="settings.appearance.color_scheme.dynamic.summary">使用壁纸和系统主题的颜色。</string>
     <string name="settings.appearance.theme.dark">深色</string>
     <string name="settings.appearance.theme.follow_system">跟随系统</string>
     <string name="settings.appearance.theme.light">浅色</string>
@@ -255,14 +254,11 @@
     <string name="settings.github.title">开源项目</string>
     <string name="settings.support.support_voice.summary">捐赠帮助 Timbre 持续维护</string>
     <string name="settings.support.support_voice.title">支持开发</string>
-    <string name="sleep_timer.dialog.action.decrement">更短</string>
-    <string name="sleep_timer.dialog.action.increment">更长</string>
     <string name="sleep_timer.dialog.title">做个好梦！🌙</string>
     <string name="sleep_timer.custom.title">自定义时长</string>
     <string name="sleep_timer.custom.hint">分钟</string>
     <string name="a11y.slider.playback_progress">播放进度</string>
     <string name="a11y.slider.speed">播放速度</string>
-    <string name="a11y.slider.skip_time">跳过时长</string>
     <string name="a11y.slider.volume_gain">音量增益</string>
     <string name="a11y.slider.preload">预加载集数</string>
     <string name="a11y.slider.time">时间</string>
