@@ -17,7 +17,6 @@ on:
           - jdr
           - update-json
           - announcement
-          - all
       legacy_owner:
         description: '同时刷新旧 owner（cq10086123）路径；README 与 App 预填地址还指向它时保持勾选'
         required: false
