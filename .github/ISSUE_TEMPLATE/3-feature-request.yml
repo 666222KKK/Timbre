@@ -9,9 +9,22 @@ body:
         欢迎提建议！说清「为什么需要」比只说「想要什么」更有价值。
 
         提交前建议先看看：
-        - [常见问题](https://github.com/cq10086123/Timbre/blob/main/docs/faq.md)
-        - [功能说明](https://github.com/cq10086123/Timbre/blob/main/docs/features.md)
-        - [已有 Issue 里的同类建议](https://github.com/cq10086123/Timbre/issues?q=is%3Aissue)，可以到那里一起讨论
+        - [常见问题](https://github.com/kxdebug/Timbre/blob/main/docs/faq.md)
+        - [功能说明](https://github.com/kxdebug/Timbre/blob/main/docs/features.md)
+        - [已有 Issue 里的同类建议](https://github.com/kxdebug/Timbre/issues?q=is%3Aissue)，可以到那里一起讨论
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 期望上线平台
+      description: 这个建议主要想在哪个平台上用到？
+      options:
+        - Android
+        - iOS
+        - 所有平台
+        - 不确定
+    validations:
+      required: true
 
   - type: textarea
     id: problem

@@ -19,11 +19,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
 import voice.core.data.BookId
 import voice.core.data.folders.AudiobookFolders
 import voice.core.data.folders.FolderType
 import voice.core.data.folders.RemoteBookSources
 import voice.core.data.repo.BookRepository
+import voice.core.data.store.AnalysisParallelismStore
 import voice.core.data.store.WebDavAutoRefreshWifiStore
 import voice.core.documentfile.CachedDocumentFile
 import voice.core.logging.api.Logger
@@ -41,6 +43,8 @@ internal constructor(
   private val bookRepo: BookRepository,
   private val scanProgressReporter: ScanProgressReporter,
   @WebDavAutoRefreshWifiStore private val autoRefreshWifiStore: DataStore<Boolean>,
+  @AnalysisParallelismStore private val analysisParallelismStore: DataStore<Int>,
+  @MediaAnalysisSemaphore private val analysisSemaphore: Semaphore,
   private val application: Application,
 ) {
 
@@ -72,12 +76,30 @@ internal constructor(
   /** Starts the app-start refresh when the network policy allows it. */
   public fun automaticScan() {
     scope.launch {
+      // The first shelf composition assembles every book, which reads the
+      // content table and then every chapter row. The scan does the same
+      // warm-up, but only after its own start-up delay - by then the first
+      // frame has already paid for both queries. Starting it here overlaps
+      // the read with the activity/DI start-up instead.
+      warmUpLibraryCaches()
       val wifiOnly = autoRefreshWifiStore.data.first()
       if (!wifiOnly || isWifiConnected()) {
         scan()
       } else {
         Logger.i("Skipping automatic library refresh because Wi-Fi is unavailable")
       }
+    }
+  }
+
+  private suspend fun warmUpLibraryCaches() {
+    try {
+      val books = bookRepo.all()
+      Logger.i("warmed up the book cache with ${books.size} books before the first frame")
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      // the shelf reads the same data and reports its own failure
+      Logger.w(e, "Could not warm up the book cache at start-up")
     }
   }
 
@@ -174,7 +196,19 @@ internal constructor(
           // folders must not deactivate the whole library, so the scanner is
           // told and skips the deactivation instead.
           val hasRegisteredFolders = audiobookFolders.hasAnyFolders()
-          val importJob = launch { scanner.scan(folders, hasRegisteredFolders) }
+          // the user's import parallelism decides how many permits one chapter
+          // analysis takes out of the shared analysis semaphore; reading it per
+          // scan keeps a changed setting effective from the next import on
+          val analysisPermits =
+            analysisPermitsFor(analysisParallelismStore.data.first())
+          val importJob = launch {
+            scanner.scan(
+              folders = folders,
+              hasRegisteredFolders = hasRegisteredFolders,
+              analysisSemaphore = analysisSemaphore,
+              analysisPermits = analysisPermits,
+            )
+          }
           while (importJob.isActive) {
             coverScanner.scan(bookRepo.all())
             delay(COVER_LOOKUP_POLL_MILLIS)

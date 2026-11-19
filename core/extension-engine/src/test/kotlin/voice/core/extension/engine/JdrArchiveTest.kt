@@ -137,9 +137,10 @@ class JdrArchiveTest {
 
   @Test
   fun rejectsPackageThatInflatesPastTheCap() {
-    // 17mb of text compresses to a few kb: the zip size says nothing about
-    // what the package expands to, which is why the total is capped as well
-    val blobs = (1..17).map { index -> "blob$index.js" to "a".repeat(1024 * 1024) }
+    // Highly compressible text: the zip size says nothing about what the
+    // package expands to, which is why the total is capped as well.
+    val megabytes = JdrArchive.MAX_UNCOMPRESSED_BYTES / (1024 * 1024) + 1
+    val blobs = (1..megabytes).map { index -> "blob$index.js" to "a".repeat(1024 * 1024) }
     val e = assertFailsWith<JdrFormatException> {
       JdrArchive.parse(zip("manifest.json" to validManifest(), *blobs.toTypedArray()))
     }
@@ -149,5 +150,43 @@ class JdrArchiveTest {
   @Test
   fun rejectsEmptyFile() {
     assertFailsWith<JdrFormatException> { JdrArchive.parse(ByteArray(0)) }
+  }
+
+  @Test
+  fun recommenderConfigFileIsInlinedAndInheritsScript() {
+    val manifest = validManifest(
+      """[{"id":"demo","name":"演示源","script":"demo.js",
+          "recommenderConfig":"rank.json"}]""",
+    )
+    val config = """
+      {"script":"rank.js","recommenders":[
+        {"id":"hot","name":"热门","entry":"__rec_hot","cacheMinutes":180}
+      ]}
+    """.trimIndent()
+    val archive = JdrArchive.parse(
+      zip(
+        "manifest.json" to manifest,
+        "demo.js" to demoScript,
+        "rank.js" to ";globalThis.__rec_hot = async () => [];",
+        "rank.json" to config,
+      ),
+    )
+    val source = archive.manifest.sources.single()
+    assertEquals(1, source.recommenders.size)
+    assertEquals("rank.js", source.recommenders[0].script)
+    assertEquals("__rec_hot", source.recommenders[0].entry)
+    assertEquals(180, source.recommenders[0].cacheMinutes)
+  }
+
+  @Test
+  fun missingRecommenderConfigIsRejected() {
+    val manifest = validManifest(
+      """[{"id":"demo","name":"演示源","script":"demo.js",
+          "recommenderConfig":"rank.json"}]""",
+    )
+    val e = assertFailsWith<JdrFormatException> {
+      JdrArchive.parse(zip("manifest.json" to manifest, "demo.js" to demoScript))
+    }
+    assertTrue(e.message!!.contains("推荐配置文件"), e.message)
   }
 }

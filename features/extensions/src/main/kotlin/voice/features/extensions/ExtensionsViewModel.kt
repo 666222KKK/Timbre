@@ -8,6 +8,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import voice.core.common.DispatcherProvider
@@ -36,6 +37,7 @@ data class ExtensionPackageUi(
   val homepage: String = "",
   val installedAtMillis: Long = 0,
   val allowInsecure: Boolean = false,
+  val expanded: Boolean = true,
 )
 
 data class ExtensionsViewState(
@@ -88,6 +90,8 @@ class ExtensionsViewModel(
         val manifest = extensionManager.installFromUri(uri)
         message.value = null
         announce(manifest)
+      } catch (e: CancellationException) {
+        throw e
       } catch (e: Exception) {
         message.value = e.userMessage()
       }
@@ -116,6 +120,8 @@ class ExtensionsViewModel(
         urlInput.value = ""
         message.value = null
         announce(manifest)
+      } catch (e: CancellationException) {
+        throw e
       } catch (e: Exception) {
         message.value = e.userMessage()
       }
@@ -129,6 +135,23 @@ class ExtensionsViewModel(
     scope.launch {
       extensionManager.setSourceEnabled(sourceId, enabled)
     }
+  }
+
+  fun toggleExpanded(manifestId: String) {
+    scope.launch { extensionManager.togglePackageExpanded(manifestId) }
+  }
+
+  /** Commits a drag result: the new order of sources inside one package. */
+  fun onSourceReorder(
+    manifestId: String,
+    orderedSourceIds: List<String>,
+  ) {
+    scope.launch { extensionManager.setSourceOrder(manifestId, orderedSourceIds) }
+  }
+
+  /** Commits a drag result: the new order of packages. */
+  fun onPackageReorder(orderedManifestIds: List<String>) {
+    scope.launch { extensionManager.setPackageOrder(orderedManifestIds) }
   }
 
   fun requestUninstall(manifestId: String) {
@@ -145,6 +168,8 @@ class ExtensionsViewModel(
     runBusy {
       try {
         extensionManager.uninstall(manifestId)
+      } catch (e: CancellationException) {
+        throw e
       } catch (e: Exception) {
         message.value = e.userMessage()
       }
@@ -175,26 +200,30 @@ class ExtensionsViewModel(
     }
   }
 
-  private fun Exception.userMessage(): String = (this as? ExtensionInstallException)?.message ?: "导入失败：${message ?: "未知错误"}"
+  private fun Exception.userMessage(): String = (this as? ExtensionInstallException)?.message ?: "导入失败：${this.message ?: "未知错误"}"
 
-  private fun InstalledExtensionPackage.toUi(): ExtensionPackageUi = ExtensionPackageUi(
-    manifestId = manifest.id,
-    name = manifest.name,
-    version = manifest.version,
-    author = manifest.author,
-    description = manifest.description,
-    homepage = manifest.homepage,
-    installedAtMillis = installedAtMillis,
-    allowInsecure = manifest.allowInsecure,
-    sources = manifest.sources.map { meta ->
-      ExtensionSourceUi(
-        sourceId = meta.id,
-        name = meta.name.ifBlank { meta.id },
-        capabilities = meta.capabilities,
-        enabled = isSourceEnabled(meta.id),
-      )
-    },
-  )
+  private fun InstalledExtensionPackage.toUi(): ExtensionPackageUi {
+    val ordered = orderedSources()
+    return ExtensionPackageUi(
+      manifestId = manifest.id,
+      name = manifest.name,
+      version = manifest.version,
+      author = manifest.author,
+      description = manifest.description,
+      homepage = manifest.homepage,
+      installedAtMillis = installedAtMillis,
+      allowInsecure = manifest.allowInsecure,
+      sources = ordered.map { meta ->
+        ExtensionSourceUi(
+          sourceId = meta.id,
+          name = meta.name.ifBlank { meta.id },
+          capabilities = meta.capabilities,
+          enabled = isSourceEnabled(meta.id),
+        )
+      },
+      expanded = expanded,
+    )
+  }
 
   @AssistedFactory
   interface Factory {

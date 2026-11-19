@@ -3,10 +3,10 @@ package voice.features.bookOverview.search
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +21,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -267,6 +269,9 @@ internal fun OnlineChaptersDialog(
   var reloadKey by remember { mutableIntStateOf(0) }
   val scope = rememberCoroutineScope()
   val context = LocalContext.current
+  // A system Toast gets the app icon stamped on Android 12+, so the hint is
+  // shown as an in-dialog snackbar instead.
+  val snackbarHostState = remember { SnackbarHostState() }
   // shelf membership is explicit: the dialog checks the stored books once and
   // the button toggles add/remove; tapping a chapter only starts playback
   val shelfKey = OnlineBookRef(book.source, book.bookId).key
@@ -306,7 +311,7 @@ internal fun OnlineChaptersDialog(
     if (shelfState == true) {
       playFromChapter(chapters, chapter)
     } else {
-      Toast.makeText(context, joinShelfFirst, Toast.LENGTH_SHORT).show()
+      scope.launch { snackbarHostState.showSnackbar(joinShelfFirst) }
     }
   }
   fun toggleShelf(chapters: List<OnlineChapter>) {
@@ -346,139 +351,149 @@ internal fun OnlineChaptersDialog(
     onDismissRequest = onDismiss,
     title = { Text(book.title, maxLines = 3, overflow = TextOverflow.Ellipsis) },
     text = {
-      if (state.loading) {
-        Column(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 16.dp),
-          horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-          CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
-          Text(
-            modifier = Modifier.padding(top = 12.dp),
-            text = if (book.trackCount > 0) {
-              stringResource(StringsR.string.search_online_chapters_loading_count, book.trackCount)
-            } else {
-              stringResource(StringsR.string.search_online_chapters_loading)
-            },
-          )
-          Text(
-            modifier = Modifier.padding(top = 4.dp),
-            text = stringResource(StringsR.string.search_online_chapters_loading_hint),
-            style = MaterialTheme.typography.bodySmall,
-          )
-        }
-      } else if (state.failed) {
-        Column(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 16.dp),
-          horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-          Text(
-            stringResource(
-              if (offline) {
-                StringsR.string.search_online_offline
-              } else {
-                StringsR.string.search_online_error
-              },
-            ),
-          )
-          state.errorMessage?.let { detail ->
-            Text(
-              modifier = Modifier.padding(top = 6.dp),
-              text = detail,
-              style = MaterialTheme.typography.bodySmall,
-              maxLines = 4,
-              overflow = TextOverflow.Ellipsis,
-            )
-          }
-          TextButton(
-            modifier = Modifier.padding(top = 8.dp),
-            onClick = { reloadKey++ },
-          ) {
-            Text(stringResource(StringsR.string.search_online_retry))
-          }
-        }
-      } else {
-        if (state.chapters.isEmpty()) {
-          Text(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(vertical = 24.dp),
-            text = stringResource(StringsR.string.search_online_chapters_empty),
-            style = MaterialTheme.typography.bodySmall,
-          )
-        } else {
-          var page by remember { mutableIntStateOf(0) }
-          val pageCount = (state.chapters.size + CHAPTERS_PAGE_SIZE - 1) / CHAPTERS_PAGE_SIZE
-          val safePage = page.coerceIn(0, pageCount - 1)
-          val pageChapters = state.chapters.drop(safePage * CHAPTERS_PAGE_SIZE).take(CHAPTERS_PAGE_SIZE)
-          Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
+      Box(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth()) {
+          if (state.loading) {
+            Column(
               modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp),
-              text = stringResource(StringsR.string.search_online_chapters_count, state.chapters.size),
-              style = MaterialTheme.typography.bodyMedium,
-            )
-            if (shelfState == true) {
+                .padding(vertical = 16.dp),
+              horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+              CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
               Text(
-                modifier = Modifier.padding(bottom = 8.dp),
-                text = stringResource(StringsR.string.search_online_added_to_shelf),
+                modifier = Modifier.padding(top = 12.dp),
+                text = if (book.trackCount > 0) {
+                  stringResource(StringsR.string.search_online_chapters_loading_count, book.trackCount)
+                } else {
+                  stringResource(StringsR.string.search_online_chapters_loading)
+                },
+              )
+              Text(
+                modifier = Modifier.padding(top = 4.dp),
+                text = stringResource(StringsR.string.search_online_chapters_loading_hint),
                 style = MaterialTheme.typography.bodySmall,
               )
             }
-            if (pageCount > 1) {
-              Row(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .horizontalScroll(rememberScrollState())
-                  .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+          } else if (state.failed) {
+            Column(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
+              horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+              Text(
+                stringResource(
+                  if (offline) {
+                    StringsR.string.search_online_offline
+                  } else {
+                    StringsR.string.search_online_error
+                  },
+                ),
+              )
+              state.errorMessage?.let { detail ->
+                Text(
+                  modifier = Modifier.padding(top = 6.dp),
+                  text = detail,
+                  style = MaterialTheme.typography.bodySmall,
+                  maxLines = 4,
+                  overflow = TextOverflow.Ellipsis,
+                )
+              }
+              TextButton(
+                modifier = Modifier.padding(top = 8.dp),
+                onClick = { reloadKey++ },
               ) {
-                repeat(pageCount) { index ->
-                  FilterChip(
-                    selected = index == safePage,
-                    onClick = { page = index },
-                    label = { Text(pageLabel(index, state.chapters.size)) },
-                  )
-                }
+                Text(stringResource(StringsR.string.search_online_retry))
               }
             }
-            LazyColumn(
-              modifier = Modifier.size(width = 280.dp, height = 360.dp),
-              verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-              items(pageChapters) { chapter ->
-                val shownSeconds = remember(chapter.id, durationsVersion) {
-                  catalog.measuredDurationMs(book.source, book.bookId, chapter.id)
-                    ?.div(1_000L)?.toInt()
-                    ?: chapter.durationSeconds
-                }
-                Row(
+          } else {
+            if (state.chapters.isEmpty()) {
+              Text(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(vertical = 24.dp),
+                text = stringResource(StringsR.string.search_online_chapters_empty),
+                style = MaterialTheme.typography.bodySmall,
+              )
+            } else {
+              var page by remember { mutableIntStateOf(0) }
+              val pageCount = (state.chapters.size + CHAPTERS_PAGE_SIZE - 1) / CHAPTERS_PAGE_SIZE
+              val safePage = page.coerceIn(0, pageCount - 1)
+              val pageChapters = state.chapters.drop(safePage * CHAPTERS_PAGE_SIZE).take(CHAPTERS_PAGE_SIZE)
+              Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
                   modifier = Modifier
                     .fillMaxWidth()
-                    .clickable {
-                      onChapterClick(state.chapters, chapter)
-                    },
-                  verticalAlignment = Alignment.CenterVertically,
-                ) {
+                    .padding(bottom = 8.dp),
+                  text = stringResource(StringsR.string.search_online_chapters_count, state.chapters.size),
+                  style = MaterialTheme.typography.bodyMedium,
+                )
+                if (shelfState == true) {
                   Text(
-                    text = chapter.title,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    text = stringResource(StringsR.string.search_online_added_to_shelf),
+                    style = MaterialTheme.typography.bodySmall,
                   )
-                  if (shownSeconds > 0) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = formatDuration(shownSeconds))
+                }
+                if (pageCount > 1) {
+                  Row(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .horizontalScroll(rememberScrollState())
+                      .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                  ) {
+                    repeat(pageCount) { index ->
+                      FilterChip(
+                        selected = index == safePage,
+                        onClick = { page = index },
+                        label = { Text(pageLabel(index, state.chapters.size)) },
+                      )
+                    }
+                  }
+                }
+                LazyColumn(
+                  modifier = Modifier.size(width = 280.dp, height = 360.dp),
+                  verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                  items(pageChapters) { chapter ->
+                    val shownSeconds = remember(chapter.id, durationsVersion) {
+                      catalog.measuredDurationMs(book.source, book.bookId, chapter.id)
+                        ?.div(1_000L)?.toInt()
+                        ?: chapter.durationSeconds
+                    }
+                    Row(
+                      modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                          onChapterClick(state.chapters, chapter)
+                        },
+                      verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                      Text(
+                        text = chapter.title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                      )
+                      if (shownSeconds > 0) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = formatDuration(shownSeconds))
+                      }
+                    }
                   }
                 }
               }
             }
           }
         }
+        SnackbarHost(
+          hostState = snackbarHostState,
+          modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(top = 8.dp),
+        )
       }
     },
     confirmButton = {

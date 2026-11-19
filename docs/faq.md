@@ -23,7 +23,7 @@
 
 ### 支持哪些音频格式？
 
-Android 平台原生支持的格式基本都支持：MP3、M4A/M4B、AAC、FLAC、OGG、OPUS、WAV、MKA/MKV、MP4、WebM、3GP 等。完整列表见 [SupportedAudioFormats.kt](https://github.com/cq10086123/Timbre/blob/main/core/data/api/src/main/kotlin/voice/core/data/SupportedAudioFormats.kt)。
+Android 平台原生支持的格式基本都支持：MP3、M4A/M4B、AAC、FLAC、OGG、OPUS、WAV、MKA/MKV、MP4、WebM、3GP 等。完整列表见 [SupportedAudioFormats.kt](https://github.com/kxdebug/Timbre/blob/main/core/data/api/src/main/kotlin/voice/core/data/SupportedAudioFormats.kt)。
 
 如果某个文件没被识别，多半是文件本身损坏，或编码不被你的 Android 版本支持。
 

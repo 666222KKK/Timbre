@@ -10,8 +10,8 @@ body:
         写清目录结构基本能一次定位。
 
         提交前可以先看这两处：
-        - [FAQ · 怎么换封面？](https://github.com/cq10086123/Timbre/blob/main/docs/faq.md)
-        - [README · 使用小贴士](https://github.com/cq10086123/Timbre/blob/main/README.md)
+        - [FAQ · 怎么换封面？](https://github.com/kxdebug/Timbre/blob/main/docs/faq.md)
+        - [README · 使用小贴士](https://github.com/kxdebug/Timbre/blob/main/README.md)
           （封面自动识别的规则、长按书籍菜单里能改什么）
 
         如果 App 直接闪退、或播放没有声音，请改用「Bug 报告」模板，那样能带上更多排查信息。

@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import voice.core.data.ThemeColorScheme
 import voice.core.data.ThemeMode
 import voice.core.strings.R as StringsR
 
@@ -36,18 +35,6 @@ internal fun ThemeModeRow(
   SelectionRow(
     title = stringResource(StringsR.string.settings_appearance_theme_title),
     value = themeMode.label(),
-    onClick = onClick,
-  )
-}
-
-@Composable
-internal fun ThemeColorSchemeRow(
-  themeColorScheme: ThemeColorScheme,
-  onClick: () -> Unit,
-) {
-  SelectionRow(
-    title = stringResource(StringsR.string.settings_appearance_color_scheme_title),
-    value = themeColorScheme.label(),
     onClick = onClick,
   )
 }
@@ -83,47 +70,6 @@ internal fun ThemeModeDialog(
       TextButton(
         onClick = {
           onThemeModeSelect(temporarySelection)
-        },
-        content = {
-          Text(stringResource(StringsR.string.common_dialog_confirm))
-        },
-      )
-    },
-  )
-}
-
-@Composable
-internal fun ThemeColorSchemeDialog(
-  selectedThemeColorScheme: ThemeColorScheme,
-  onThemeColorSchemeSelect: (ThemeColorScheme) -> Unit,
-  onDismiss: () -> Unit,
-) {
-  var temporarySelection by remember(selectedThemeColorScheme) {
-    mutableStateOf(selectedThemeColorScheme)
-  }
-  AlertDialog(
-    onDismissRequest = onDismiss,
-    title = {
-      Text(stringResource(StringsR.string.settings_appearance_color_scheme_title))
-    },
-    text = {
-      Column {
-        ThemeColorScheme.entries.forEach { themeColorScheme ->
-          SelectionDialogItem(
-            text = themeColorScheme.label(),
-            supportingText = themeColorScheme.supportingText(),
-            selected = themeColorScheme == temporarySelection,
-            onClick = {
-              temporarySelection = themeColorScheme
-            },
-          )
-        }
-      }
-    },
-    confirmButton = {
-      TextButton(
-        onClick = {
-          onThemeColorSchemeSelect(temporarySelection)
         },
         content = {
           Text(stringResource(StringsR.string.common_dialog_confirm))
@@ -198,21 +144,5 @@ private fun ThemeMode.label(): String {
     ThemeMode.FollowSystem -> stringResource(StringsR.string.settings_appearance_theme_follow_system)
     ThemeMode.Light -> stringResource(StringsR.string.settings_appearance_theme_light)
     ThemeMode.Dark -> stringResource(StringsR.string.settings_appearance_theme_dark)
-  }
-}
-
-@Composable
-private fun ThemeColorScheme.label(): String {
-  return when (this) {
-    ThemeColorScheme.VoiceBlue -> stringResource(StringsR.string.settings_appearance_color_scheme_voice_blue)
-    ThemeColorScheme.Dynamic -> stringResource(StringsR.string.settings_appearance_color_scheme_dynamic)
-  }
-}
-
-@Composable
-private fun ThemeColorScheme.supportingText(): String? {
-  return when (this) {
-    ThemeColorScheme.VoiceBlue -> null
-    ThemeColorScheme.Dynamic -> stringResource(StringsR.string.settings_appearance_color_scheme_dynamic_summary)
   }
 }

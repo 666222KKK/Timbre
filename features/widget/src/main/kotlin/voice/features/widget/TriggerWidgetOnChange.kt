@@ -5,10 +5,13 @@ import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
@@ -38,7 +41,25 @@ class TriggerWidgetOnChange(
   }
 
   private fun anythingChanged(): Flow<Any?> {
-    return merge(currentBookChanged(), playStateChanged(), bookIdChanged())
+    return merge(
+      currentBookChanged(),
+      bookIdChanged(),
+      // Every play/pause transition must trigger one refresh, otherwise the
+      // button would keep the icon of the previous state after pausing.
+      playStateChanged(),
+      // The persisted position only moves at save points, so while playing the
+      // widget is refreshed on a fixed cadence to keep the progress bar moving.
+      playStateChanged().flatMapLatest { state ->
+        if (state == PlayStateManager.PlayState.Playing) positionTicker() else emptyFlow()
+      },
+    )
+  }
+
+  private fun positionTicker(): Flow<Unit> = flow {
+    while (true) {
+      emit(Unit)
+      delay(2_000)
+    }
   }
 
   private fun bookIdChanged(): Flow<BookId?> {

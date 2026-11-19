@@ -19,7 +19,7 @@ Timbre 与 Voice 一样采用 [GPLv3](license.md) 许可证开源，欢迎在遵
 
 ## 链接
 
-- 仓库：<https://github.com/cq10086123/Timbre>
-- 问题反馈：<https://github.com/cq10086123/Timbre/issues>
-- 下载：<https://github.com/cq10086123/Timbre/releases/latest>
+- 仓库：<https://github.com/kxdebug/Timbre>
+- 问题反馈：<https://github.com/kxdebug/Timbre/issues>
+- 下载：<https://github.com/kxdebug/Timbre/releases/latest>
 - 上游项目：<https://github.com/PaulWoitaschek/Voice>

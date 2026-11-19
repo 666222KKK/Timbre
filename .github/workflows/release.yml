@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       versionName:
-        description: '版本名，如 3.6.2.1'
+        description: '版本名，如 3.7.0'
         required: true
-        default: '3.6.2.4'
+        default: '3.7.0'
       versionCode:
-        description: '递增版本号，如 633'
+        description: '递增版本号，如 650'
         required: true
-        default: '636'
+        default: '650'
   release:
     types: [published]
 

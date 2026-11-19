@@ -205,6 +205,26 @@
     return JSON.stringify(result === undefined ? null : result);
   };
 
+  // Companion recommendation scripts expose plain global functions instead of
+  // calling registerSource(). This hook is intentionally identical in shape to
+  // __invoke: the Android QuickJS bridge only resolves an awaited promise
+  // reliably when it comes from a direct call, not from a nested async IIFE.
+  // Never rejects: a thrown error is turned into an `{ok:false}` envelope.
+  // The Android QuickJS bridge sometimes drops a rejected promise, which used
+  // to leave the caller waiting forever ("result promise is still pending")
+  // and the discover page spinning with no way out.
+  globalThis.__invokeEntry = async (entry, paramsJson) => {
+    try {
+      const fn = globalThis[entry];
+      if (typeof fn !== 'function') throw new Error('推荐脚本缺少 ' + entry);
+      const params = paramsJson ? JSON.parse(paramsJson) : {};
+      const result = await fn(params);
+      return JSON.stringify({ ok: true, json: JSON.stringify(result === undefined ? null : result) });
+    } catch (e) {
+      return JSON.stringify({ ok: false, error: String((e && e.message) || e) });
+    }
+  };
+
   globalThis.__sourceInfo = () => {
     if (!registered) return null;
     return JSON.stringify({

@@ -1,6 +1,5 @@
 package voice.features.folderPicker.addcontent
 
-import android.net.Uri
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
@@ -10,12 +9,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
-import voice.core.data.folders.AudiobookFolders
-import voice.core.data.folders.FolderType
 import voice.core.extension.ExtensionInstallException
 import voice.core.extension.ExtensionManager
 import voice.core.logging.api.Logger
-import voice.core.scanner.MediaScanTrigger
 import voice.navigation.Destination
 import voice.navigation.Destination.OnboardingCompletion
 import voice.navigation.Navigator
@@ -23,9 +19,7 @@ import voice.navigation.Origin
 
 @AssistedInject
 class AddContentViewModel(
-  private val audiobookFolders: AudiobookFolders,
   private val extensionManager: ExtensionManager,
-  private val mediaScanTrigger: MediaScanTrigger,
   dispatcherProvider: DispatcherProvider,
   private val navigator: Navigator,
   @Assisted
@@ -36,15 +30,6 @@ class AddContentViewModel(
 
   private val importError = MutableStateFlow<String?>(null)
   val sourceImportError: StateFlow<String?> = importError.asStateFlow()
-
-  internal fun addFolder(uri: Uri) {
-    scope.launch {
-      // bookshelf model: the picked folder itself is one book
-      audiobookFolders.add(uri, FolderType.SingleFolder)
-      mediaScanTrigger.scan(restartIfScanning = true)
-      navigateAfterAdd()
-    }
-  }
 
   internal fun importSource(source: SourceImport) {
     scope.launch {
@@ -60,6 +45,11 @@ class AddContentViewModel(
           ?: "书源导入失败：" + (e.message ?: "未知错误")
       }
     }
+  }
+
+  /** 跳过引导：不添加任何内容，直接进入书架（或完成引导流程）。 */
+  internal fun enter() {
+    navigateAfterAdd()
   }
 
   internal fun consumeImportError() {

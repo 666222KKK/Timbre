@@ -89,6 +89,14 @@ class BookPlayViewModel(
   internal val dialogState: State<BookPlayDialogViewState?>
     field = mutableStateOf<BookPlayDialogViewState?>(null)
 
+  /**
+   * 在线源取流失败时的原始报错。用窗口而不是 snackbar：源给的原因经常是
+   * 一整句业务话术（"同一IP每 30 秒仅可请求 1 次音频，请 26 秒后再试…"），
+   * 一闪而过的底部提示根本读不完，也没法复制。
+   */
+  internal val sourceError: State<BookPlaySourceErrorViewState?>
+    field = mutableStateOf<BookPlaySourceErrorViewState?>(null)
+
   init {
     scope.launch {
       player.pauseIfCurrentBookDifferentFrom(bookId)
@@ -97,7 +105,7 @@ class BookPlayViewModel(
     scope.launch {
       onlinePlaybackCatalog.playbackErrors.collect { error ->
         if (error.bookUri == bookId.value) {
-          viewEffects.tryEmit(BookPlayViewEffect.OnlineSourceError(error.kind))
+          sourceError.value = BookPlaySourceErrorViewState(error.kind, error.detail)
         }
       }
     }
@@ -250,7 +258,15 @@ class BookPlayViewModel(
     }
 
     val sleepTime = remember { sleepTimer.state }.collectAsState().value
-    val hasMoreThanOneChapter = book.chapters.sumOf { it.chapterMarks.count() } > 1
+    // This runs on every position tick (2.5 Hz) during composition. Summing
+    // every mark of every chapter was O(chapters) per tick, which stutters on
+    // books with thousands of chapters; two marks already settle the answer.
+    var markCount = 0
+    for (chapter in book.chapters) {
+      markCount += chapter.chapterMarks.size
+      if (markCount > 1) break
+    }
+    val hasMoreThanOneChapter = markCount > 1
     return BookPlayViewState(
       sleepTimerState = sleepTime.toViewState(),
       playing = isPlaying,
@@ -286,28 +302,18 @@ class BookPlayViewModel(
     dialogState.value = null
   }
 
-  fun incrementSleepTime() {
-    updateSleepTimeViewState {
-      val customTime = it.customSleepTime
-      val newTime = customTime + 1
-      sleepTimerPreferenceStore.updateData { preference -> preference.copy(duration = newTime.minutes) }
-      SleepTimerViewState(newTime)
-    }
-  }
-
-  fun decrementSleepTime() {
-    updateSleepTimeViewState {
-      val customTime = it.customSleepTime
-      val newTime = (customTime - 1).coerceAtLeast(1)
-      sleepTimerPreferenceStore.updateData { preference ->
-        preference.copy(duration = newTime.minutes)
-      }
-      SleepTimerViewState(newTime)
-    }
+  fun dismissSourceError() {
+    Logger.d("dismissSourceError")
+    sourceError.value = null
   }
 
   fun onAcceptSleepTime(time: Int) {
     updateSleepTimeViewState {
+      // Remember the duration the user picked (preset or custom) so the custom
+      // row shows it next time instead of resetting to the default.
+      sleepTimerPreferenceStore.updateData { preference ->
+        preference.copy(duration = time.minutes)
+      }
       val book = currentBook() ?: return@updateSleepTimeViewState null
       scope.launch {
         bookmarkRepository.addBookmarkAtBookPosition(

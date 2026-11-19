@@ -25,6 +25,11 @@ class UpdateChecker {
   }
 
   // Releases are authoritative for this fork; metadata mirrors provide a network fallback.
+  // raw.githubusercontent.com first: it reflects main within a minute of a push. jsDelivr
+  // follows because it is reachable from mainland China where github often is not — but it
+  // caches branch URLs for up to 12h and its purge API is unreliable, so right after a
+  // release it may serve stale notes and even a lower version. Every endpoint is tried in
+  // order and a failure or a timeout of one is silently ignored.
   private val endpoints = listOf(
     "https://api.github.com/repos/666222KKK/Timbre/releases/latest",
     "https://raw.githubusercontent.com/666222KKK/Timbre/main/update.json",
@@ -56,34 +61,21 @@ class UpdateChecker {
       } else {
         null
       }
-      body?.let { parseRelease(endpoint, it) }
+      body?.let { parseRelease(it) }
     } finally {
       connection.disconnect()
     }
   }
 
-  internal fun parseRelease(
-    endpoint: String,
-    body: String,
-  ): LatestRelease? {
+  internal fun parseRelease(body: String): LatestRelease? {
     val element = json.parseToJsonElement(body).jsonObject
-    return if (endpoint.endsWith(JSON_FILE_NAME)) {
-      val versionName = element[VERSION_NAME_KEY]?.jsonPrimitive?.contentOrNull ?: return null
-      LatestRelease(versionName, element[RELEASE_NOTES_KEY]?.jsonPrimitive?.contentOrNull)
-    } else {
-      // the GitHub api answers with the release tag, e.g. "v1.0.9", and the
-      // markdown release notes in the body field
-      val tagName = element[TAG_NAME_KEY]?.jsonPrimitive?.contentOrNull ?: return null
-      LatestRelease(tagName.removePrefix("v"), element[BODY_KEY]?.jsonPrimitive?.contentOrNull)
-    }
+    val versionName = element[VERSION_NAME_KEY]?.jsonPrimitive?.contentOrNull ?: return null
+    return LatestRelease(versionName, element[RELEASE_NOTES_KEY]?.jsonPrimitive?.contentOrNull)
   }
 
   private companion object {
-    const val JSON_FILE_NAME = "update.json"
     const val VERSION_NAME_KEY = "versionName"
     const val RELEASE_NOTES_KEY = "releaseNotes"
-    const val TAG_NAME_KEY = "tag_name"
-    const val BODY_KEY = "body"
     const val HTTP_OK = 200
     const val CONNECT_TIMEOUT_MS = 5_000
     const val READ_TIMEOUT_MS = 8_000

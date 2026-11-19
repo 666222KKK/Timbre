@@ -13,6 +13,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import voice.core.strings.R as StringsR
@@ -33,6 +36,9 @@ fun PlayButton(
   FloatingActionButton(
     modifier = modifier
       .size(fabSize)
+      // The icon description flips between play and pause; marking the button
+      // as a live region makes TalkBack announce the state change.
+      .semantics { liveRegion = LiveRegionMode.Polite }
       .then(sharedElementModifier),
     onClick = onPlayClick,
     shape = RoundedCornerShape(cornerSize),

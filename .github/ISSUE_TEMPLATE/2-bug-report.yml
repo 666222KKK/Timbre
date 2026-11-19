@@ -9,8 +9,21 @@ body:
         感谢反馈！信息填得越完整，问题修得越快。
 
         提交前请先：
-        1. 搜索[已有 Issue](https://github.com/cq10086123/Timbre/issues?q=is%3Aissue)，避免重复；
-        2. 升级到[最新版本](https://github.com/cq10086123/Timbre/releases/latest)，确认问题依然存在。
+        1. 搜索[已有 Issue](https://github.com/kxdebug/Timbre/issues?q=is%3Aissue)，避免重复；
+        2. 升级到[最新版本](https://github.com/kxdebug/Timbre/releases/latest)，确认问题依然存在。
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 运行平台
+      description: 问题出现在哪个平台上？两个平台的表现可能不一样，先确认一下
+      options:
+        - Android
+        - iOS
+        - 鸿蒙（HarmonyOS）
+        - 不确定
+    validations:
+      required: true
 
   - type: textarea
     id: what-happened
@@ -86,10 +99,11 @@ body:
       required: true
 
   - type: input
-    id: android-version
+    id: os-version
     attributes:
-      label: Android 版本
-      placeholder: "Android 14"
+      label: 系统版本
+      description: Android 填 Android 版本，iOS 填 iOS 版本
+      placeholder: "Android 14 / iOS 18"
     validations:
       required: true
 
