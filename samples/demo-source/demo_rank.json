@@ -1,0 +1,18 @@
+{
+  "script": "demo_rank.js",
+  "recommenders": [
+    {
+      "id": "hot",
+      "name": "热门榜单",
+      "entry": "__rec_demo_hot",
+      "description": "示例：榜单缓存 3 小时，有效期内不再请求",
+      "cacheMinutes": 180
+    },
+    {
+      "id": "newest",
+      "name": "最新上架",
+      "entry": "__rec_demo_newest",
+      "description": "示例：不写 cacheMinutes，每次实时拉取"
+    }
+  ]
+}

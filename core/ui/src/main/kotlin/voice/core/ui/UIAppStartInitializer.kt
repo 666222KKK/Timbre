@@ -48,7 +48,10 @@ class UIAppStartInitializer(
             .maxSizeBytes(64L * 1024L * 1024L)
             .build()
         }
-        .crossfade(false)
+        // The shelf placeholder is a flat album-art block; a hard cut from it
+        // to the decoded cover reads as a flicker on every cold start, so fade
+        // instead of switching instantly.
+        .crossfade(150)
         .build(),
     )
     themeModeStore.data

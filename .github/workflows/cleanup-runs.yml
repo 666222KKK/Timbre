@@ -1,0 +1,81 @@
+name: Cleanup workflow runs
+
+# Keeps the Actions history empty: every finished CI run deletes the previous
+# ones so the list never grows. Failing runs are the exception - they stay
+# visible until a later run succeeds, so a broken build can still be inspected
+# while it is being fixed.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+concurrency:
+  group: cleanup-workflow-runs
+  cancel-in-progress: true
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete previous runs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // workflow_dispatch has no trigger run: treat it as a successful
+            // run, i.e. wipe everything.
+            const trigger = context.payload.workflow_run;
+            const ciFailed = trigger?.conclusion === 'failure';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            core.info(ciFailed ? 'CI failed: keeping failed runs' : 'CI passed: clearing history');
+
+            // One page holds at most 100 runs; loop until nothing removable is
+            // left so a large backlog is cleared in a single cleanup.
+            let deleted = 0;
+            for (let round = 0; round < 50; round++) {
+              const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+                owner,
+                repo,
+                per_page: 100,
+              });
+
+              const stale = data.workflow_runs.filter((run) => {
+                // Never delete the cleanup run itself.
+                if (run.id === context.runId) return false;
+                // While the build is broken, keep the failures for inspection.
+                if (ciFailed && run.conclusion === 'failure') return false;
+                return true;
+              });
+
+              if (stale.length === 0) {
+                core.info(`done, ${data.workflow_runs.length} runs left`);
+                break;
+              }
+
+              let deletedThisRound = 0;
+              for (const run of stale) {
+                try {
+                  await github.rest.actions.deleteWorkflowRun({
+                    owner,
+                    repo,
+                    run_id: run.id,
+                  });
+                  deletedThisRound++;
+                } catch (error) {
+                  // In-progress runs cannot be deleted; skip and retry later.
+                  core.warning(`skip run ${run.id} (#${run.run_number}): ${error.message}`);
+                }
+              }
+
+              deleted += deletedThisRound;
+              if (deletedThisRound === 0) {
+                core.warning(`nothing deletable in round ${round + 1}, stopping`);
+                break;
+              }
+            }
+            core.info(`deleted ${deleted} runs`);

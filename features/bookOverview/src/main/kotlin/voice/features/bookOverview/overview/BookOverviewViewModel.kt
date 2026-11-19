@@ -30,11 +30,12 @@ import voice.core.data.PlaybackPosition
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.internals.dao.RecentBookSearchDao
 import voice.core.data.store.CurrentBookStore
+import voice.core.data.store.DiscoverHintShownStore
+import voice.core.data.store.DiscoverPageStore
 import voice.core.data.store.GridModeStore
 import voice.core.data.withoutAudioFileExtension
 import voice.core.featureflag.ExperimentalPlaybackPersistenceQualifier
 import voice.core.featureflag.FeatureFlag
-import voice.core.featureflag.FolderPickerInSettingsFeatureFlagQualifier
 import voice.core.featureflag.KioskModeFeatureFlagQualifier
 import voice.core.logging.api.Logger
 import voice.core.online.OnlineBook
@@ -52,6 +53,7 @@ import voice.core.scanner.DeviceHasStoragePermissionBug
 import voice.core.scanner.MediaScanTrigger
 import voice.core.search.BookSearch
 import voice.core.ui.GridCount
+import voice.core.update.AnnouncementNotifier
 import voice.core.update.UpdateNotifier
 import voice.features.bookOverview.di.BookOverviewScope
 import voice.features.bookOverview.search.BookSearchViewState
@@ -70,19 +72,21 @@ class BookOverviewViewModel(
   private val currentBookStoreDataStore: DataStore<BookId?>,
   @GridModeStore
   private val gridModeStore: DataStore<GridMode>,
+  @DiscoverPageStore
+  private val discoverPageStore: DataStore<Boolean>,
   private val gridCount: GridCount,
   private val navigator: Navigator,
   private val recentBookSearchDao: RecentBookSearchDao,
   private val search: BookSearch,
   private val deviceHasStoragePermissionBug: DeviceHasStoragePermissionBug,
-  @FolderPickerInSettingsFeatureFlagQualifier
-  private val folderPickerInSettingsFeatureFlag: FeatureFlag<Boolean>,
   @ExperimentalPlaybackPersistenceQualifier
   private val experimentalPlaybackPersistenceFeatureFlag: FeatureFlag<Boolean>,
   @KioskModeFeatureFlagQualifier
   private val kioskModeFeatureFlag: FeatureFlag<Boolean>,
   val updateNotifier: UpdateNotifier,
+  val announcementNotifier: AnnouncementNotifier,
   @OnlineSourceBooksStore private val onlineBooksStore: DataStore<List<OnlineBook>>,
+  @DiscoverHintShownStore private val discoverHintShownStore: DataStore<Boolean>,
   private val onlineChapterStore: OnlineChapterStore,
   private val onlinePlaybackCatalog: OnlinePlaybackCatalog,
   dispatcherProvider: DispatcherProvider,
@@ -94,6 +98,13 @@ class BookOverviewViewModel(
 
   fun attach() {
     mediaScanner.scan()
+  }
+
+  /** The swipe hint is one-shot: once shown, it never comes back. */
+  fun onDiscoverHintShown() {
+    scope.launch {
+      discoverHintShownStore.updateData { true }
+    }
   }
 
   @Composable
@@ -147,6 +158,10 @@ class BookOverviewViewModel(
       .collectAsState(initial = GridMode.FOLLOW_DEVICE).value
 
     val noBooks = !scannerActive && books.isEmpty()
+
+    val discoverPageEnabled by remember { discoverPageStore.data }.collectAsState(initial = true)
+    // Initialising to "already shown" avoids a flash of the hint on every cold start.
+    val discoverHintShown by remember { discoverHintShownStore.data }.collectAsState(initial = true)
 
     val layoutMode = when (gridMode) {
       GridMode.LIST -> BookOverviewLayoutMode.List
@@ -215,6 +230,8 @@ class BookOverviewViewModel(
 
     return BookOverviewViewState(
       layoutMode = layoutMode,
+      discoverPageEnabled = discoverPageEnabled,
+      showDiscoverHint = discoverPageEnabled && !discoverHintShown,
       books = booksWithPendingImports,
       playButtonState = if (playState == PlayStateManager.PlayState.Playing) {
         BookOverviewViewState.PlayButtonState.Playing
@@ -231,7 +248,7 @@ class BookOverviewViewModel(
       searchActive = searchActive,
       searchViewState = bookSearchViewState,
       showStoragePermissionBugCard = hasStoragePermissionBug,
-      showFolderPickerIcon = !folderPickerInSettingsFeatureFlag.get(),
+      showFolderPickerIcon = false,
     )
   }
 

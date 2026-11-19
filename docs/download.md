@@ -2,11 +2,11 @@
 
 ## 下载
 
-1. 打开 [GitHub Releases 页面](https://github.com/cq10086123/Timbre/releases/latest)。
+1. 打开 [GitHub Releases 页面](https://github.com/kxdebug/Timbre/releases/latest)。
 2. 在最新版本的 **Assets** 里下载 `timbre-v<版本号>.apk`。
 3. 在手机上打开 APK 安装。如果系统提示「允许安装未知来源应用」，按提示授权一次即可。
 
-[:material-download: &nbsp;前往最新版本](https://github.com/cq10086123/Timbre/releases/latest){ .md-button .md-button--primary }
+[:material-download: &nbsp;前往最新版本](https://github.com/kxdebug/Timbre/releases/latest){ .md-button .md-button--primary }
 
 ## 系统要求
 

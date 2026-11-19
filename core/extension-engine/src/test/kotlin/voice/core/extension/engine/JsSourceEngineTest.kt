@@ -168,6 +168,39 @@ class JsSourceEngineTest {
   }
 
   @Test
+  fun invokeEntryLoadsCompanionRecommendationScript() = runTest {
+    val host = server.url("/").toString().removeSuffix("/")
+    val mainScript = """
+      registerSource({
+        id: 'demo',
+        async search() { return [] },
+        async chapters() { return [] },
+        async audio() { return '' },
+      });
+    """.trimIndent()
+    val recScript = """
+      globalThis.__rec_rank = async function (params) {
+        const resp = await http.get('$host/rank', { timeoutMs: 5000 });
+        return JSON.parse(resp.body);
+      };
+    """.trimIndent()
+    server.enqueue(MockResponse.Builder().body("""[{"id":"1","bookTitle":"剑来"}]""").build())
+    val engine = JsSourceEngine.create(
+      sourceId = "demo",
+      script = mainScript,
+      scriptName = "demo.js",
+      http = http(),
+      additionalScripts = listOf("rank.js" to recScript),
+    )
+    val json = engine.invokeEntry("__rec_rank", """{"groupId":"hot","page":1}""", 10_000)
+    val items = SourceContract.parseSearchResults(json)
+    assertEquals(1, items.size)
+    assertEquals("剑来", items[0].title)
+    assertEquals("/rank", server.takeRequest().url.encodedPath)
+    engine.close()
+  }
+
+  @Test
   fun rejectsMissingRegistration() = runTest {
     assertFailsWith<SourceContractException> {
       JsSourceEngine.create("demo", "var x = 1;", "nope.js", http())

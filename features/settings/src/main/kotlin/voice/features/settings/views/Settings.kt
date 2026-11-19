@@ -14,7 +14,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -108,22 +107,6 @@ private fun Settings(
       }
       item {
         ListItem(
-          modifier = Modifier.clickable { listener.openFolderPicker() },
-          leadingContent = {
-            Icon(
-              imageVector = VoiceIcons.Book,
-              contentDescription = stringResource(StringsR.string.library_folders_title),
-            )
-          },
-          supportingContent = {
-            Text(stringResource(StringsR.string.settings_library_folders_summary))
-          },
-        ) {
-          Text(stringResource(StringsR.string.library_folders_title))
-        }
-      }
-      item {
-        ListItem(
           modifier = Modifier.clickable { listener.openWebDav() },
           leadingContent = {
             Icon(
@@ -178,19 +161,6 @@ private fun Settings(
           }
         }
       }
-      item {
-        ListItem(
-          modifier = Modifier.clickable { listener.openSourceShare() },
-          leadingContent = {
-            Icon(
-              imageVector = VoiceIcons.Language,
-              contentDescription = stringResource(StringsR.string.settings_source_share_title),
-            )
-          },
-        ) {
-          Text(stringResource(StringsR.string.settings_source_share_title))
-        }
-      }
       if (viewState.onlineSourceEnabled) {
         item {
           ListItem(
@@ -236,40 +206,30 @@ private fun Settings(
         }
       }
       item {
-        ListItem(
-          modifier = Modifier.clickable { listener.setAutoRefreshWifi(!viewState.autoRefreshWifi) },
-          leadingContent = {
-            Icon(
-              imageVector = VoiceIcons.Language,
-              contentDescription = stringResource(StringsR.string.settings_library_auto_refresh_wifi_title),
-            )
-          },
-          supportingContent = {
-            Text(stringResource(StringsR.string.settings_library_auto_refresh_wifi_summary))
-          },
-          trailingContent = {
-            Switch(
-              checked = viewState.autoRefreshWifi,
-              onCheckedChange = listener::setAutoRefreshWifi,
-            )
-          },
-        ) {
-          Text(stringResource(StringsR.string.settings_library_auto_refresh_wifi_title))
-        }
-      }
-      item {
         ThemeModeRow(viewState.themeMode, listener::onThemeModeRowClick)
-      }
-      if (viewState.showThemeColorSchemePref) {
-        item {
-          ThemeColorSchemeRow(viewState.themeColorScheme, listener::onThemeColorSchemeRowClick)
-        }
       }
       if (viewState.showAnalyticSetting && !viewState.kioskMode) {
         item {
           AnalyticsRow(analyticsEnabled = viewState.analyticsEnabled, toggle = listener::toggleAnalytics)
         }
       }
+      item {
+        ListItem(
+          modifier = Modifier.clickable { listener.openPlayerSettings() },
+          leadingContent = {
+            Icon(
+              imageVector = VoiceIcons.Timelapse,
+              contentDescription = stringResource(StringsR.string.settings_player_title),
+            )
+          },
+          supportingContent = {
+            Text(stringResource(StringsR.string.settings_player_summary))
+          },
+        ) {
+          Text(stringResource(StringsR.string.settings_player_title))
+        }
+      }
+
       item {
         ListItem(
           modifier = Modifier.clickable { listener.toggleGrid() },
@@ -296,80 +256,11 @@ private fun Settings(
           Text(stringResource(StringsR.string.settings_library_use_grid_title))
         }
       }
-
       item {
-        SeekTimeRow(viewState.seekTimeInSeconds) {
-          listener.onSeekAmountRowClick()
-        }
-      }
-
-      item {
-        AutoRewindRow(viewState.autoRewindInSeconds) {
-          listener.onAutoRewindRowClick()
-        }
-      }
-
-      item {
-        ListItem(
-          modifier = Modifier.clickable { listener.openPlayerSettings() },
-          leadingContent = {
-            Icon(
-              imageVector = VoiceIcons.Timelapse,
-              contentDescription = stringResource(StringsR.string.settings_player_title),
-            )
-          },
-          supportingContent = {
-            Text(stringResource(StringsR.string.settings_player_summary))
-          },
-        ) {
-          Text(stringResource(StringsR.string.settings_player_title))
-        }
-      }
-
-      item {
-        ListItem(
-          modifier = Modifier.clickable { listener.onImportParallelismRowClick() },
-          leadingContent = {
-            Icon(
-              imageVector = VoiceIcons.Speed,
-              contentDescription = stringResource(StringsR.string.settings_playback_import_parallelism_title),
-            )
-          },
-          supportingContent = {
-            Text(stringResource(StringsR.string.settings_playback_import_parallelism_summary))
-          },
-          trailingContent = {
-            Text(
-              text = stringResource(StringsR.string.settings_playback_import_parallelism_value, viewState.importParallelism),
-              style = MaterialTheme.typography.bodyLarge,
-            )
-          },
-        ) {
-          Text(stringResource(StringsR.string.settings_playback_import_parallelism_title))
-        }
-      }
-
-      item {
-        ListItem(
-          modifier = Modifier.clickable { listener.setBtSkipToChapter(!viewState.btSkipToChapter) },
-          leadingContent = {
-            Icon(
-              imageVector = VoiceIcons.FastRewind,
-              contentDescription = stringResource(StringsR.string.settings_playback_bt_skip_chapter_title),
-            )
-          },
-          supportingContent = {
-            Text(stringResource(StringsR.string.settings_playback_bt_skip_chapter_summary))
-          },
-          trailingContent = {
-            Switch(
-              checked = viewState.btSkipToChapter,
-              onCheckedChange = listener::setBtSkipToChapter,
-            )
-          },
-        ) {
-          Text(stringResource(StringsR.string.settings_playback_bt_skip_chapter_title))
-        }
+        DiscoverPageRow(
+          enabled = viewState.discoverPageEnabled,
+          onToggle = listener::toggleDiscoverPage,
+        )
       }
 
       item {
@@ -512,13 +403,6 @@ private fun Dialog(
 ) {
   val dialog = viewState.dialog ?: return
   when (dialog) {
-    SettingsViewState.Dialog.AutoRewindAmount -> {
-      AutoRewindAmountDialog(
-        currentSeconds = viewState.autoRewindInSeconds,
-        onSecondsConfirm = listener::autoRewindAmountChang,
-        onDismiss = listener::dismissDialog,
-      )
-    }
     SettingsViewState.Dialog.OnlineSourceBaseUrl -> {
       OnlineSourceTextDialog(
         title = stringResource(StringsR.string.settings_online_source_base_url_title),
@@ -543,20 +427,6 @@ private fun Dialog(
         onDismiss = listener::dismissDialog,
       )
     }
-    SettingsViewState.Dialog.ImportParallelism -> {
-      ImportParallelismDialog(
-        currentLevel = viewState.importParallelism,
-        onLevelSelect = listener::importParallelismChanged,
-        onDismiss = listener::dismissDialog,
-      )
-    }
-    SettingsViewState.Dialog.SeekTime -> {
-      SeekAmountDialog(
-        currentSeconds = viewState.seekTimeInSeconds,
-        onSecondsConfirm = listener::seekAmountChanged,
-        onDismiss = listener::dismissDialog,
-      )
-    }
     SettingsViewState.Dialog.Theme -> {
       ThemeModeDialog(
         selectedThemeMode = viewState.themeMode,
@@ -564,61 +434,7 @@ private fun Dialog(
         onDismiss = listener::dismissDialog,
       )
     }
-    SettingsViewState.Dialog.ColorScheme -> {
-      ThemeColorSchemeDialog(
-        selectedThemeColorScheme = viewState.themeColorScheme,
-        onThemeColorSchemeSelect = listener::setThemeColorScheme,
-        onDismiss = listener::dismissDialog,
-      )
-    }
   }
-}
-
-@Composable
-internal fun ImportParallelismDialog(
-  currentLevel: Int,
-  onLevelSelect: (Int) -> Unit,
-  onDismiss: () -> Unit,
-) {
-  AlertDialog(
-    onDismissRequest = onDismiss,
-    title = {
-      Text(stringResource(StringsR.string.settings_playback_import_parallelism_title))
-    },
-    text = {
-      Column {
-        Text(
-          modifier = Modifier.padding(bottom = 8.dp),
-          text = stringResource(StringsR.string.settings_playback_import_parallelism_summary),
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        (1..3).forEach { level ->
-          Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .clickable { onLevelSelect(level) },
-            verticalAlignment = Alignment.CenterVertically,
-          ) {
-            RadioButton(
-              selected = level == currentLevel,
-              onClick = { onLevelSelect(level) },
-            )
-            Text(
-              text = stringResource(StringsR.string.settings_playback_import_parallelism_option, level),
-              style = MaterialTheme.typography.bodyLarge,
-            )
-          }
-        }
-      }
-    },
-    confirmButton = {},
-    dismissButton = {
-      TextButton(onClick = onDismiss) {
-        Text(stringResource(StringsR.string.common_dialog_cancel))
-      }
-    },
-  )
 }
 
 @Composable

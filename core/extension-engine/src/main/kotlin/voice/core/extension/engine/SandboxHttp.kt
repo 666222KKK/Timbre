@@ -1,6 +1,7 @@
 package voice.core.extension.engine
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -8,13 +9,19 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import java.io.IOException
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * The http bridge source scripts use. Options and the response cross the JS
@@ -81,27 +88,59 @@ public class OkHttpSandboxHttp(baseClient: OkHttpClient) : SandboxHttp {
       else -> null
     }
     builder.method(method.uppercase(), body)
-    return withContext(Dispatchers.IO) {
-      client.newCall(builder.build()).execute().use { response ->
-        val source = response.body.source()
-        source.request(MAX_RESPONSE_BYTES + 1)
-        check(source.buffer.size <= MAX_RESPONSE_BYTES) { "响应超过 ${MAX_RESPONSE_BYTES / 1024 / 1024}MB 上限: $url" }
-        val text = source.readUtf8()
-        val headers = buildJsonObject {
-          // duplicate header names (set-cookie!) are joined, not overwritten
-          val merged = LinkedHashMap<String, String>()
-          response.headers.forEach { (name, value) ->
-            val key = name.lowercase()
-            merged[key] = merged[key]?.let { "$it, $value" } ?: value
+    val call = client.newCall(builder.build())
+    // enqueue + invokeOnCancellation: when the caller's coroutine is cancelled
+    // (e.g. the user switches recommendation slots) the socket must be aborted
+    // too. `execute()` could not be cancelled, so abandoned calls kept their
+    // connections open for the whole callTimeout and starved the NAT.
+    val response = suspendCancellableCoroutine<Response> { continuation ->
+      continuation.invokeOnCancellation { call.cancel() }
+      call.enqueue(
+        object : Callback {
+          override fun onFailure(
+            call: Call,
+            e: IOException,
+          ) {
+            if (continuation.isActive) continuation.resumeWithException(e)
           }
-          merged.forEach { (name, value) -> put(name, value) }
+
+          override fun onResponse(
+            call: Call,
+            response: Response,
+          ) {
+            if (continuation.isActive) continuation.resume(response) else response.close()
+          }
+        },
+      )
+    }
+    return try {
+      withContext(Dispatchers.IO) {
+        response.use { response ->
+          val source = response.body.source()
+          source.request(MAX_RESPONSE_BYTES + 1)
+          check(source.buffer.size <= MAX_RESPONSE_BYTES) { "响应超过 ${MAX_RESPONSE_BYTES / 1024 / 1024}MB 上限: $url" }
+          val text = source.readUtf8()
+          val headers = buildJsonObject {
+            // duplicate header names (set-cookie!) are joined, not overwritten
+            val merged = LinkedHashMap<String, String>()
+            response.headers.forEach { (name, value) ->
+              val key = name.lowercase()
+              merged[key] = merged[key]?.let { "$it, $value" } ?: value
+            }
+            merged.forEach { (name, value) -> put(name, value) }
+          }
+          buildJsonObject {
+            put("status", response.code)
+            put("headers", headers)
+            put("body", text)
+          }.toString()
         }
-        buildJsonObject {
-          put("status", response.code)
-          put("headers", headers)
-          put("body", text)
-        }.toString()
       }
+    } catch (e: Throwable) {
+      // Cancelled between enqueue and the IO hop: release the body instead of
+      // leaking the connection.
+      response.close()
+      throw e
     }
   }
 }

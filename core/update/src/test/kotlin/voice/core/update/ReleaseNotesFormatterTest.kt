@@ -9,7 +9,7 @@ class ReleaseNotesFormatterTest {
   fun `headings bullets links images and bold are reduced to display lines`() {
     val markdown = """
       ## What's Changed
-      * fix: 在线书源设置不生效 @cq10086123
+      * fix: 在线书源设置不生效 @kxdebug
       - **新增** [下载页](https://example.com/download)
       ![logo](https://example.com/logo.png)
       Full Changelog: https://example.com/compare/v1..v2
@@ -20,7 +20,7 @@ class ReleaseNotesFormatterTest {
     assertEquals(
       listOf(
         ReleaseNotesLine("What's Changed", isHeading = true),
-        ReleaseNotesLine("•  fix: 在线书源设置不生效 @cq10086123"),
+        ReleaseNotesLine("•  fix: 在线书源设置不生效 @kxdebug"),
         ReleaseNotesLine("•  新增 下载页"),
         ReleaseNotesLine("logo"),
         ReleaseNotesLine("Full Changelog: https://example.com/compare/v1..v2"),

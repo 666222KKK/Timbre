@@ -26,11 +26,27 @@ public data class InstalledExtensionPackage(
   public val installedAtMillis: Long,
   /** sourceId → enabled; missing entries are enabled. */
   public val sourceEnabled: Map<String, Boolean> = emptyMap(),
+  /**
+   * Explicit display order set by the user. Ids missing here keep their
+   * manifest order after the listed ones, so old data and newly added sources
+   * both behave sensibly.
+   */
+  public val sourceOrder: List<String> = emptyList(),
+  /** Whether the package's source list is expanded in the management screen. */
+  public val expanded: Boolean = true,
 ) {
 
   public fun isSourceEnabled(sourceId: String): Boolean = sourceEnabled[sourceId] ?: true
 
-  public fun enabledSources(): List<ExtensionSourceMeta> = manifest.sources.filter { isSourceEnabled(it.id) }
+  /** All sources in user order (disabled ones included). */
+  public fun orderedSources(): List<ExtensionSourceMeta> {
+    val byId = manifest.sources.associateBy { it.id }
+    val ordered = sourceOrder.mapNotNull { byId[it] }
+    val placed = ordered.mapTo(HashSet()) { it.id }
+    return ordered + manifest.sources.filter { it.id !in placed }
+  }
+
+  public fun enabledSources(): List<ExtensionSourceMeta> = orderedSources().filter { isSourceEnabled(it.id) }
 }
 
 @Inject

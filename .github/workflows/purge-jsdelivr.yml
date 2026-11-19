@@ -1,0 +1,115 @@
+name: 刷新 jsDelivr 缓存
+
+# 手动运行：Actions → 「刷新 jsDelivr 缓存」→ Run workflow
+# 上传新的 samples/Timbre.jdr / update.json / announcement.txt 之后点一次。
+# jsDelivr 对 @main 分支引用有 12 小时 CDN 缓存，不刷新最长要等 12 小时；
+# purge 只清 CDN 缓存，不改仓库内容，也不影响浏览器本地的 7 天缓存。
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: '要刷新的文件（默认只刷接口源包）'
+        required: true
+        default: 'jdr'
+        type: choice
+        options:
+          - jdr
+          - update-json
+          - announcement
+      legacy_owner:
+        description: '同时刷新旧 owner（cq10086123）路径；README 与 App 预填地址还指向它时保持勾选'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: purge-jsdelivr
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  purge:
+    name: 清缓存并校验
+    runs-on: ubuntu-latest
+    steps:
+      - name: 刷新 CDN 缓存并与仓库源文件比对
+        env:
+          TARGET: ${{ inputs.target }}
+          LEGACY: ${{ inputs.legacy_owner }}
+        run: |
+          set -euo pipefail
+
+          case "$TARGET" in
+            jdr)           files=("samples/Timbre.jdr") ;;
+            update-json)   files=("update.json") ;;
+            announcement)  files=("announcement.txt") ;;
+            all)           files=("samples/Timbre.jdr" "update.json" "announcement.txt") ;;
+            *) echo "::error::未知的 target：$TARGET"; exit 1 ;;
+          esac
+
+          owners=("kxdebug")
+          if [ "$LEGACY" = "true" ]; then
+            owners+=("cq10086123")
+          fi
+
+          rows=()
+          for file in "${files[@]}"; do
+            # 以当前仓库（kxdebug）的 main 为唯一基准
+            raw_url="https://raw.githubusercontent.com/kxdebug/Timbre/main/$file"
+            if ! curl -fsSL --max-time 60 "$raw_url" -o /dev/null; then
+              echo "::notice::仓库里没有 $file，跳过"
+              rows+=("| \`$file\` | — | 文件不存在，已跳过 |")
+              continue
+            fi
+            expected=$(curl -fsSL --max-time 60 "$raw_url" | sha256sum | awk '{print $1}')
+
+            for owner in "${owners[@]}"; do
+              purge_url="https://purge.jsdelivr.net/gh/$owner/Timbre@main/$file"
+              cdn_url="https://cdn.jsdelivr.net/gh/$owner/Timbre@main/$file"
+
+              echo "刷新 $purge_url"
+              body=$(curl -fsS --retry 3 --retry-delay 2 --max-time 30 "$purge_url")
+              printf '%s' "$body" | python3 -c 'import json,sys; d=json.load(sys.stdin); p=d.get("paths",{}); ok=d.get("status")=="finished" and bool(p) and all(v.get("providers",{}).get("CF") is True and v.get("providers",{}).get("FY") is True for v in p.values()); sys.exit(0 if ok else 1)' || {
+                echo "::error::$purge_url 未返回成功状态：$body"
+                exit 1
+              }
+              if printf '%s' "$body" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if any(v.get("throttled") for v in d.get("paths",{}).values()) else 1)'; then
+                echo "::warning::$purge_url 触发限流，稍后重跑本工作流即可"
+              fi
+
+              actual=""
+              ok=false
+              for attempt in 1 2 3 4 5 6; do
+                actual=$(curl -fsSL --max-time 60 "$cdn_url" | sha256sum | awk '{print $1}')
+                if [ "$actual" = "$expected" ]; then
+                  ok=true
+                  break
+                fi
+                sleep 5
+              done
+
+              if [ "$ok" = "true" ]; then
+                echo "OK  $owner/$file  哈希 ${actual:0:12}… 与仓库一致"
+                rows+=("| \`$file\` | \`$owner\` | OK ${actual:0:12}… |")
+              elif [ "$owner" = "kxdebug" ]; then
+                echo "::error::$cdn_url 仍是旧内容（CDN=${actual:0:12}… 仓库=${expected:0:12}…）"
+                exit 1
+              else
+                echo "::warning::$cdn_url 与仓库不一致，旧 owner 路径建议尽快换成 kxdebug"
+                rows+=("| \`$file\` | \`$owner\` | 未同步（旧路径） |")
+              fi
+            done
+          done
+
+          {
+            echo "## jsDelivr 缓存刷新结果"
+            echo
+            echo "| 文件 | CDN 路径 owner | 结果 |"
+            echo "| --- | --- | --- |"
+            printf '%s\n' "${rows[@]}"
+            echo
+            echo "目标：\`$TARGET\`；旧 owner：\`$LEGACY\`；基准：\`kxdebug/Timbre@main\`"
+          } >> "$GITHUB_STEP_SUMMARY"

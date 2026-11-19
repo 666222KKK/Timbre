@@ -15,20 +15,14 @@ import voice.core.common.AppInfoProvider
 import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
 import voice.core.data.GridMode
-import voice.core.data.ThemeColorScheme
 import voice.core.data.ThemeMode
 import voice.core.data.sleeptimer.SleepTimerPreference
-import voice.core.data.store.AnalysisParallelismStore
 import voice.core.data.store.AnalyticsConsentStore
-import voice.core.data.store.AutoRewindAmountStore
-import voice.core.data.store.BtSkipToChapterStore
 import voice.core.data.store.DeveloperMenuUnlockedStore
+import voice.core.data.store.DiscoverPageStore
 import voice.core.data.store.GridModeStore
-import voice.core.data.store.SeekTimeStore
 import voice.core.data.store.SleepTimerPreferenceStore
-import voice.core.data.store.ThemeColorSchemeStore
 import voice.core.data.store.ThemeModeStore
-import voice.core.data.store.WebDavAutoRefreshWifiStore
 import voice.core.featureflag.FeatureFlag
 import voice.core.featureflag.KioskModeFeatureFlagQualifier
 import voice.core.online.OnlineSourceBaseUrlStore
@@ -36,7 +30,6 @@ import voice.core.online.OnlineSourceCredentialStore
 import voice.core.online.OnlineSourceEnabledStore
 import voice.core.online.OnlineSourceException
 import voice.core.online.OnlineSourceService
-import voice.core.ui.DynamicColorAvailability
 import voice.core.ui.GridCount
 import voice.core.update.UpdateNotifier
 import voice.navigation.Destination
@@ -49,16 +42,12 @@ import voice.core.strings.R as StringsR
 class SettingsViewModel(
   @ThemeModeStore
   private val themeModeStore: DataStore<ThemeMode>,
-  @ThemeColorSchemeStore
-  private val themeColorSchemeStore: DataStore<ThemeColorScheme>,
-  @AutoRewindAmountStore
-  private val autoRewindAmountStore: DataStore<Int>,
-  @SeekTimeStore
-  private val seekTimeStore: DataStore<Int>,
   private val navigator: Navigator,
   private val appInfoProvider: AppInfoProvider,
   @GridModeStore
   private val gridModeStore: DataStore<GridMode>,
+  @DiscoverPageStore
+  private val discoverPageStore: DataStore<Boolean>,
   @SleepTimerPreferenceStore
   private val sleepTimerPreferenceStore: DataStore<SleepTimerPreference>,
   @AnalyticsConsentStore
@@ -68,12 +57,6 @@ class SettingsViewModel(
   private val kioskModeFeatureFlag: FeatureFlag<Boolean>,
   @DeveloperMenuUnlockedStore
   private val developerMenuUnlockedStore: DataStore<Boolean>,
-  @WebDavAutoRefreshWifiStore
-  private val autoRefreshWifiStore: DataStore<Boolean>,
-  @BtSkipToChapterStore
-  private val btSkipToChapterStore: DataStore<Boolean>,
-  @AnalysisParallelismStore
-  private val analysisParallelismStore: DataStore<Int>,
   @OnlineSourceEnabledStore
   private val onlineSourceEnabledStore: DataStore<Boolean>,
   @OnlineSourceBaseUrlStore
@@ -81,7 +64,6 @@ class SettingsViewModel(
   @OnlineSourceCredentialStore
   private val onlineSourceCredentialStore: DataStore<String>,
   private val onlineSourceService: OnlineSourceService,
-  private val dynamicColorAvailability: DynamicColorAvailability,
   private val updateNotifier: UpdateNotifier,
   dispatcherProvider: DispatcherProvider,
 ) : SettingsListener {
@@ -98,10 +80,8 @@ class SettingsViewModel(
   @Composable
   fun viewState(): SettingsViewState {
     val themeMode by remember { themeModeStore.data }.collectAsState(initial = ThemeMode.FollowSystem)
-    val themeColorScheme by remember { themeColorSchemeStore.data }.collectAsState(initial = ThemeColorScheme.VoiceBlue)
-    val autoRewindAmount by remember { autoRewindAmountStore.data }.collectAsState(initial = 0)
-    val seekTime by remember { seekTimeStore.data }.collectAsState(initial = 0)
     val gridMode by remember { gridModeStore.data }.collectAsState(initial = GridMode.GRID)
+    val discoverPageEnabled by remember { discoverPageStore.data }.collectAsState(initial = true)
     val autoSleepTimer by remember { sleepTimerPreferenceStore.data }.collectAsState(
       initial = SleepTimerPreference.Default,
     )
@@ -110,24 +90,14 @@ class SettingsViewModel(
       kioskModeFeatureFlag.get()
     }
     val showDeveloperMenu by remember { developerMenuUnlockedStore.data }.collectAsState(initial = false)
-    val autoRefreshWifi by remember { autoRefreshWifiStore.data }.collectAsState(initial = true)
-    val btSkipToChapter by remember { btSkipToChapterStore.data }.collectAsState(initial = true)
-    val importParallelism by remember { analysisParallelismStore.data }.collectAsState(initial = 1)
     val onlineSourceEnabled by remember { onlineSourceEnabledStore.data }.collectAsState(initial = false)
     val onlineSourceBaseUrl by remember { onlineSourceBaseUrlStore.data }.collectAsState(initial = "")
     val onlineSourceCredential by remember { onlineSourceCredentialStore.data }.collectAsState(initial = "")
     val onlineSourceVerifying = onlineSourceVerifyState.value
     val onlineSourceVerifyError = onlineSourceVerifyError.value
     val update by updateNotifier.update.collectAsState()
-    val showThemeColorSchemePref = remember {
-      dynamicColorAvailability.isSupported()
-    }
     return SettingsViewState(
       themeMode = themeMode,
-      themeColorScheme = themeColorScheme,
-      showThemeColorSchemePref = showThemeColorSchemePref,
-      seekTimeInSeconds = seekTime,
-      autoRewindInSeconds = autoRewindAmount,
       dialog = dialog.value,
       appVersion = appInfoProvider.versionName,
       availableUpdate = update,
@@ -136,6 +106,7 @@ class SettingsViewModel(
         GridMode.GRID -> true
         GridMode.FOLLOW_DEVICE -> gridCount.useGridAsDefault()
       },
+      discoverPageEnabled = discoverPageEnabled,
       autoSleepTimer = SettingsViewState.AutoSleepTimerViewState(
         enabled = autoSleepTimer.autoSleepTimerEnabled,
         startTime = autoSleepTimer.autoSleepStartTime,
@@ -144,9 +115,6 @@ class SettingsViewModel(
       analyticsEnabled = analyticsEnabled,
       showAnalyticSetting = appInfoProvider.analyticsIncluded,
       showDeveloperMenu = showDeveloperMenu,
-      autoRefreshWifi = autoRefreshWifi,
-      btSkipToChapter = btSkipToChapter,
-      importParallelism = importParallelism,
       onlineSourceEnabled = onlineSourceEnabled,
       onlineSourceBaseUrl = onlineSourceBaseUrl,
       onlineSourceCredential = onlineSourceCredential,
@@ -168,10 +136,6 @@ class SettingsViewModel(
     dialog.value = SettingsViewState.Dialog.Theme
   }
 
-  override fun onThemeColorSchemeRowClick() {
-    dialog.value = SettingsViewState.Dialog.ColorScheme
-  }
-
   override fun setThemeMode(themeMode: ThemeMode) {
     mainScope.launch {
       themeModeStore.updateData { themeMode }
@@ -179,11 +143,10 @@ class SettingsViewModel(
     dialog.value = null
   }
 
-  override fun setThemeColorScheme(themeColorScheme: ThemeColorScheme) {
+  override fun toggleDiscoverPage() {
     mainScope.launch {
-      themeColorSchemeStore.updateData { themeColorScheme }
+      discoverPageStore.updateData { enabled -> !enabled }
     }
-    dialog.value = null
   }
 
   override fun toggleGrid() {
@@ -202,26 +165,6 @@ class SettingsViewModel(
     }
   }
 
-  override fun seekAmountChanged(seconds: Int) {
-    mainScope.launch {
-      seekTimeStore.updateData { seconds }
-    }
-  }
-
-  override fun onSeekAmountRowClick() {
-    dialog.value = SettingsViewState.Dialog.SeekTime
-  }
-
-  override fun autoRewindAmountChang(seconds: Int) {
-    mainScope.launch {
-      autoRewindAmountStore.updateData { seconds }
-    }
-  }
-
-  override fun onAutoRewindRowClick() {
-    dialog.value = SettingsViewState.Dialog.AutoRewindAmount
-  }
-
   override fun dismissDialog() {
     dialog.value = null
   }
@@ -230,20 +173,12 @@ class SettingsViewModel(
     navigator.goTo(Destination.Website("https://github.com/666222KKK/Timbre"))
   }
 
-  override fun openSourceShare() {
-    navigator.goTo(Destination.Website("https://cq10086123.github.io/Timbre/share.html"))
-  }
-
   override fun openSupportVoice() {
     navigator.goTo(Destination.SupportVoice)
   }
 
-  override fun openFolderPicker() {
-    navigator.goTo(Destination.FolderPicker)
-  }
-
   override fun openWebDav() {
-    navigator.goTo(Destination.WebDavServers(Origin.Default))
+    navigator.goTo(Destination.WebDavSettings(Origin.Default))
   }
 
   override fun openBackup() {
@@ -252,18 +187,6 @@ class SettingsViewModel(
 
   override fun openExtensions() {
     navigator.goTo(Destination.ExtensionSources)
-  }
-
-  override fun setAutoRefreshWifi(checked: Boolean) {
-    mainScope.launch {
-      autoRefreshWifiStore.updateData { checked }
-    }
-  }
-
-  override fun setBtSkipToChapter(checked: Boolean) {
-    mainScope.launch {
-      btSkipToChapterStore.updateData { checked }
-    }
   }
 
   override fun setOnlineSourceEnabled(checked: Boolean) {
@@ -340,17 +263,6 @@ class SettingsViewModel(
     needBaseUrl -> StringsR.string.settings_online_source_error_need_base_url
     invalidUrl -> StringsR.string.settings_online_source_error_invalid_url
     else -> StringsR.string.settings_online_source_error_invalid
-  }
-
-  override fun onImportParallelismRowClick() {
-    dialog.value = SettingsViewState.Dialog.ImportParallelism
-  }
-
-  override fun importParallelismChanged(level: Int) {
-    dialog.value = null
-    mainScope.launch {
-      analysisParallelismStore.updateData { level }
-    }
   }
 
   override fun openPlayerSettings() {

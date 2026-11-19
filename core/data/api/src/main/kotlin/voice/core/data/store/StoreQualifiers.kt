@@ -26,6 +26,14 @@ public annotation class SleepTimerPreferenceStore
 @Qualifier
 public annotation class GridModeStore
 
+/** Whether the shelf may be swiped left to reveal the discover page. */
+@Qualifier
+public annotation class DiscoverPageStore
+
+/** One-shot flag: the "swipe left for discover" hint was already shown. */
+@Qualifier
+public annotation class DiscoverHintShownStore
+
 @Qualifier
 public annotation class ThemeModeStore
 
@@ -50,11 +58,17 @@ public annotation class AnalyticsConsentStore
 @Qualifier
 public annotation class DeveloperMenuUnlockedStore
 
+/** The day (epoch day) of the last update check, so it runs once a day at most. */
 @Qualifier
 public annotation class UpdateLastCheckStore
 
+/** The release the user dismissed, so its prompt does not come back. */
 @Qualifier
 public annotation class UpdateDismissedStore
+
+/** The fingerprint of the announcement the user asked to never see again. */
+@Qualifier
+public annotation class AnnouncementDismissedStore
 
 @Qualifier
 public annotation class FeatureFlagOverridesStore

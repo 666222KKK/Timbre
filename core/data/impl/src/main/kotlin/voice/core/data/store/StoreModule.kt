@@ -163,6 +163,20 @@ public interface StoreModule {
 
   @Provides
   @SingleIn(AppScope::class)
+  @DiscoverPageStore
+  private fun discoverPage(factory: VoiceDataStoreFactory): DataStore<Boolean> {
+    return factory.boolean("discoverPageEnabled", defaultValue = true)
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @DiscoverHintShownStore
+  private fun discoverHintShown(factory: VoiceDataStoreFactory): DataStore<Boolean> {
+    return factory.boolean("discoverHintShown", defaultValue = false)
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
   @OnboardingCompletedStore
   private fun onboardingCompleted(factory: VoiceDataStoreFactory): DataStore<Boolean> {
     return factory.boolean("onboardingCompleted", defaultValue = false)
@@ -246,6 +260,17 @@ public interface StoreModule {
     return factory.create(
       serializer = String.serializer(),
       fileName = "updateDismissed",
+      defaultValue = "",
+    )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @AnnouncementDismissedStore
+  private fun announcementDismissed(factory: VoiceDataStoreFactory): DataStore<String> {
+    return factory.create(
+      serializer = String.serializer(),
+      fileName = "announcementDismissed",
       defaultValue = "",
     )
   }

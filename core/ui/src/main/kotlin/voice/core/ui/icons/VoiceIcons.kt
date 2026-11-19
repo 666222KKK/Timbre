@@ -3222,4 +3222,26 @@ object VoiceIcons {
         }
       }
       .build()
+
+  /* Material Icons "expand_less" (24dp, filled). */
+  val ExpandLess: ImageVector =
+    ImageVector.Builder(
+      name = "ExpandLess",
+      defaultWidth = 24.dp,
+      defaultHeight = 24.dp,
+      viewportWidth = 24f,
+      viewportHeight = 24f,
+    )
+      .apply {
+        path(fill = SolidColor(Color.Black)) {
+          moveTo(12f, 8f)
+          lineTo(6f, 14f)
+          lineTo(7.41f, 15.41f)
+          lineTo(12f, 10.83f)
+          lineTo(16.59f, 15.41f)
+          lineTo(18f, 14f)
+          close()
+        }
+      }
+      .build()
 }

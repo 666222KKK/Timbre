@@ -24,6 +24,7 @@ import voice.core.data.BookId
 import voice.core.data.Chapter
 import voice.core.data.ChapterId
 import voice.core.logging.api.Logger
+import java.io.File
 import java.io.IOException
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -49,6 +50,21 @@ public data class OnlinePlaybackError(
   val kind: OnlinePlaybackErrorKind,
   val detail: String?,
 )
+
+/**
+ * One resolve, kept whole instead of collapsed to null: a manual cache run has
+ * no playback dialog to show, so it needs the source's own words to tell the
+ * user why a chapter could not be fetched.
+ */
+public sealed interface StreamResolution {
+  public data class Success(val stream: ResolvedStream) : StreamResolution
+
+  /** [detail] is what the source or the network said, null when they said nothing. */
+  public data class Failure(
+    val kind: OnlinePlaybackErrorKind,
+    val detail: String?,
+  ) : StreamResolution
+}
 
 /**
  * Bridges the online source into the playback pipeline:
@@ -133,7 +149,7 @@ public class OnlinePlaybackCatalog(
    * probe can open the same chapter concurrently; coalescing them avoids two
    * full download/API round trips on a cold start.
    */
-  private val inFlightResolves = ConcurrentHashMap<String, Deferred<ResolvedStream?>>()
+  private val inFlightResolves = ConcurrentHashMap<String, Deferred<StreamResolution>>()
 
   /**
    * Bumped by [invalidateStreamUrl] so a resolve that outlives an invalidate
@@ -346,7 +362,16 @@ public class OnlinePlaybackCatalog(
     }
   }
 
-  /** The last playback position of an online book, so the UI can resume it. */
+  /**
+   * The most recent playback position kept in memory, ahead of the throttled
+   * persistence. Read by surfaces that poll, like the home screen widget.
+   */
+  public fun livePosition(key: String): OnlineLivePosition? {
+    return synchronized(stateLock) {
+      positions[key]?.let { OnlineLivePosition(it.chapterId, it.positionMs) }
+    }
+  }
+
   public fun updatePosition(
     bookId: BookId,
     chapterId: ChapterId,
@@ -510,7 +535,13 @@ public class OnlinePlaybackCatalog(
     val chapters = onlineBook.chapters.ifEmpty {
       runCatching { chapterStore.chapters(bookRef.key) }.getOrDefault(emptyList())
     }.ifEmpty {
-      runCatching { service.chapters(bookRef.source, bookRef.bookId) }.getOrDefault(emptyList())
+      // a book restored from a backup arrives without its list (the backup
+      // only carries metadata), so this fetch is the only copy: keeping it
+      // makes the next start read the disk instead of opening the player on
+      // a black screen while the source is asked again
+      runCatching { service.chapters(bookRef.source, bookRef.bookId) }
+        .getOrDefault(emptyList())
+        .also { fetched -> storeFetchedChapters(bookRef.key, fetched) }
     }
     if (chapters.isEmpty()) return null
 
@@ -546,7 +577,7 @@ public class OnlinePlaybackCatalog(
       chapters = chapterIds,
       currentChapter = chapterIds[startIndex],
       positionInChapter = startPosition.coerceAtLeast(0L),
-      cover = null,
+      cover = coverFileOf(onlineBook.cover),
       gain = onlineBook.gain,
       genre = null,
       narrator = null,
@@ -556,6 +587,49 @@ public class OnlinePlaybackCatalog(
       skipOutro = onlineBook.skipOutroMs,
     )
     return AssembledOnline(bookRef = bookRef, content = content, chapters = chapters)
+  }
+
+  /**
+   * Writes a chapter list that came from the source to [chapterStore], so the
+   * next start reads it from disk instead of a network round trip.
+   *
+   * Only books without a stored list get here: a book added through the search
+   * dialog already has one, and a book restored from a backup has none because
+   * the backup carries metadata only. Without this the player showed its
+   * loading screen on every cold start of such a book.
+   */
+  private suspend fun storeFetchedChapters(
+    key: String,
+    chapters: List<OnlineChapter>,
+  ) {
+    if (chapters.isEmpty()) return
+    try {
+      chapterStore.put(key, chapters)
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      // the store is an optimization: a failing disk must not stop playback
+      Logger.w(e, "Could not store the chapter list of $key")
+    }
+  }
+
+  /**
+   * The local cover file a shelf record points at, or null while the record
+   * still carries the remote url (or none at all).
+   *
+   * Carrying it into [BookContent.cover] means every consumer builds its
+   * artwork from the same place - the shelf card, the player screen and the
+   * [MediaItem]s of the playlist. Leaving it null forced the player to patch
+   * the artwork of the items it assembled itself, which every other writer of
+   * the playlist (the import/refresh synchronizer) knew nothing about: the
+   * media session then advertised chapters without any artwork uri, and the
+   * notification, lock screen and dynamic island lost the cover.
+   */
+  private fun coverFileOf(cover: String): File? {
+    if (!cover.startsWith("file:")) return null
+    // File.toURI() writes file:/data/... - strip the scheme, keep the path
+    val path = cover.removePrefix("file:").removePrefix("//")
+    return File(path).takeIf { it.isFile }
   }
 
   private data class AssembledOnline(
@@ -598,7 +672,7 @@ public class OnlinePlaybackCatalog(
       chapters = chapterIds,
       currentChapter = chapterIds[persistedIndex ?: 0],
       positionInChapter = persistedIndex?.let { onlineBook.positionMs }?.coerceAtLeast(0L) ?: 0L,
-      cover = null,
+      cover = coverFileOf(onlineBook.cover),
       gain = onlineBook.gain,
       genre = null,
       narrator = null,
@@ -691,15 +765,34 @@ public class OnlinePlaybackCatalog(
     ref: OnlineChapterRef,
     reportErrors: Boolean = true,
   ): ResolvedStream? {
+    return when (val resolution = resolveStream(ref)) {
+      is StreamResolution.Success -> resolution.stream
+      is StreamResolution.Failure -> {
+        if (reportErrors) reportResolutionFailure(ref, resolution)
+        null
+      }
+    }
+  }
+
+  /**
+   * The same single-flight resolve as [resolveStreamUrl], answering with the
+   * failure reason instead of null. Manual caching shows that reason; playback
+   * keeps the nullable shape its callers expect.
+   */
+  public suspend fun resolveStreamDetail(ref: OnlineChapterRef): StreamResolution {
+    return resolveStream(ref)
+  }
+
+  private suspend fun resolveStream(ref: OnlineChapterRef): StreamResolution {
     val chapterUri = OnlineUri.build(ref.source, ref.bookId, ref.chapterId)
-    cachedStreamUrl(chapterUri)?.let { return it }
+    cachedStreamUrl(chapterUri)?.let { return StreamResolution.Success(it) }
 
     while (true) {
       val existing = inFlightResolves[chapterUri]
       if (existing != null) {
         return existing.await()
       }
-      val deferred = CompletableDeferred<ResolvedStream?>()
+      val deferred = CompletableDeferred<StreamResolution>()
       val winner = inFlightResolves.putIfAbsent(chapterUri, deferred)
       if (winner != null) {
         return winner.await()
@@ -711,25 +804,26 @@ public class OnlinePlaybackCatalog(
       val bookUri = OnlineUri.buildBookUri(ref.source, ref.bookId)
       beginResolving(bookUri)
       try {
-        val resolved = resolveStreamUrlInternal(ref, reportErrors)
-        if (resolved != null && (streamUrlEpoch[chapterUri] ?: 0) == epochAtStart) {
+        val resolution = resolveStreamUrlInternal(ref)
+        if (resolution is StreamResolution.Success && (streamUrlEpoch[chapterUri] ?: 0) == epochAtStart) {
           // skip caching when invalidateStreamUrl raced this resolve: the url
           // may already have been rejected by the data source
           synchronized(stateLock) {
             if ((streamUrlEpoch[chapterUri] ?: 0) == epochAtStart) {
-              streamUrls[chapterUri] = CachedStreamUrl(resolved, SystemClock.elapsedRealtime())
+              streamUrls[chapterUri] = CachedStreamUrl(resolution.stream, SystemClock.elapsedRealtime())
             }
           }
         }
-        deferred.complete(resolved)
-        return resolved
+        deferred.complete(resolution)
+        return resolution
       } catch (e: CancellationException) {
         deferred.cancel(e)
         throw e
       } catch (e: Exception) {
         Logger.w(e, "Online stream resolve failed for $chapterUri")
-        deferred.complete(null)
-        return null
+        val failure = StreamResolution.Failure(OnlinePlaybackErrorKind.CONTENT, e.message)
+        deferred.complete(failure)
+        return failure
       } finally {
         endResolving(bookUri)
         inFlightResolves.remove(chapterUri, deferred)
@@ -818,27 +912,59 @@ public class OnlinePlaybackCatalog(
     _resolvingBooks.value = resolving
   }
 
-  private suspend fun resolveStreamUrlInternal(
-    ref: OnlineChapterRef,
-    reportErrors: Boolean,
-  ): ResolvedStream? {
+  private suspend fun resolveStreamUrlInternal(ref: OnlineChapterRef): StreamResolution {
     return try {
-      service.resolveDirectUrl(ref.source, ref.bookId, ref.chapterId)
-        ?: fail(ref, OnlinePlaybackErrorKind.CONTENT, "The source returned no audio url", reportErrors)
+      val stream = service.resolveDirectUrl(ref.source, ref.bookId, ref.chapterId, chapterOrderOf(ref))
+      // 源没抛异常、只是返回空：这时没有任何"源自己的说法"可转述，
+      // detail 留空让界面用本地化的兜底文案，别拿 App 编的英文去顶替。
+      if (stream == null) {
+        failure(ref, OnlinePlaybackErrorKind.CONTENT, detail = null)
+      } else {
+        StreamResolution.Success(stream)
+      }
     } catch (e: CancellationException) {
       throw e
     } catch (e: OnlineSourceException) {
-      fail(
+      failure(
         ref,
         if (e.requiresRelogin) OnlinePlaybackErrorKind.AUTH else OnlinePlaybackErrorKind.NETWORK,
         e.message,
-        reportErrors,
       )
     } catch (e: IOException) {
-      fail(ref, OnlinePlaybackErrorKind.NETWORK, e.message, reportErrors)
+      failure(ref, OnlinePlaybackErrorKind.NETWORK, e.message)
     } catch (e: Exception) {
-      fail(ref, OnlinePlaybackErrorKind.CONTENT, e.message, reportErrors)
+      failure(ref, OnlinePlaybackErrorKind.CONTENT, e.message)
     }
+  }
+
+  /**
+   * 这一集在专辑里的序号（持久化的 [OnlineChapter.order]），查不到就返回 null。
+   *
+   * 源的 audio 阶段有的只认序号、不认章节 id，而它在 chapters 阶段抛出来的
+   * 附加字段只活在一个进程内的 LRU 里（冷启动、大书之后就没有了），源只好
+   * 自己从头一页页翻找集号 —— 第 N 集要 `ceil(N/50)` 次串行请求，预缓存整本
+   * 时这个开销会乘上章节数。序号本来就跟着章节列表存在磁盘上，直接补给它。
+   *
+   * 章节列表在组装播放列表时已经读进 [OnlineChapterStore] 的内存缓存，这里
+   * 只是一次线性扫描，不会碰磁盘。
+   */
+  private suspend fun chapterOrderOf(ref: OnlineChapterRef): Int? {
+    val key = OnlineBookRef(ref.source, ref.bookId).key
+    // 搜索直接播放时章节列表还在手上（stash 里带 inline 列表），加入书架之后
+    // 书架记录只存元数据，列表在磁盘上的 [OnlineChapterStore] 里 —— 两处都看。
+    val inline = assembledBooks[key]?.chapters
+    val chapters = if (!inline.isNullOrEmpty()) {
+      inline
+    } else {
+      try {
+        chapterStore.chapters(key)
+      } catch (e: CancellationException) {
+        throw e
+      } catch (_: Exception) {
+        return null
+      }
+    }
+    return chapters.firstOrNull { it.id == ref.chapterId }?.order?.takeIf { it > 0 }
   }
 
   /** Remembers an assembled book so the resolve step can still see its title. */
@@ -852,31 +978,36 @@ public class OnlinePlaybackCatalog(
     assembledBooks[key] = book
   }
 
-  private fun fail(
+  private fun failure(
     ref: OnlineChapterRef,
     kind: OnlinePlaybackErrorKind,
     detail: String?,
-    reportErrors: Boolean = true,
-  ): ResolvedStream? {
+  ): StreamResolution.Failure {
     Logger.w("Online playback resolution failed for $ref: $detail")
-    if (!reportErrors) return null
+    return StreamResolution.Failure(kind = kind, detail = detail)
+  }
+
+  /** Surfaces a resolve failure to the playback dialog, deduplicated per chapter. */
+  private fun reportResolutionFailure(
+    ref: OnlineChapterRef,
+    failure: StreamResolution.Failure,
+  ) {
     val now = SystemClock.elapsedRealtime()
-    val dedupeKey = "${ref.source}::${ref.bookId}::${ref.chapterId}::$kind"
+    val dedupeKey = "${ref.source}::${ref.bookId}::${ref.chapterId}::${failure.kind}"
     synchronized(stateLock) {
-      if (dedupeKey == lastErrorKey && now - lastErrorAt < ERROR_DEDUPE_MS) return null
+      if (dedupeKey == lastErrorKey && now - lastErrorAt < ERROR_DEDUPE_MS) return
       lastErrorKey = dedupeKey
       lastErrorAt = now
     }
     val error = OnlinePlaybackError(
       bookUri = OnlineUri.buildBookUri(ref.source, ref.bookId),
       chapterId = ref.chapterId,
-      kind = kind,
-      detail = detail,
+      kind = failure.kind,
+      detail = failure.detail,
     )
     if (!_playbackErrors.tryEmit(error)) {
       Logger.w("Dropped an online playback error, the previous one is still uncollected")
     }
-    return null
   }
 
   private data class OnlinePosition(

@@ -18,6 +18,17 @@ public interface ExtensionOnlineSource {
   /** Enabled sources as search chips, with their `jdr:` prefixed names. */
   public suspend fun enabledSourceInfos(): List<OnlineSourceInfo>
 
+  /** Recommendation slots contributed by this backend. Default keeps
+   *  server-only backends and fakes source-compatible. */
+  public suspend fun recommendGroups(): List<OnlineRecommendGroup> = emptyList()
+
+  /** Loads books for one recommendation slot. */
+  public suspend fun browse(
+    source: String,
+    groupId: String,
+    page: Int,
+  ): List<OnlineSearchResult> = emptyList()
+
   public suspend fun search(
     source: String,
     keyword: String,
@@ -38,9 +49,20 @@ public interface ExtensionOnlineSource {
     bookId: String,
   ): List<OnlineChapter>
 
+  /**
+   * Resolves a playable url for one chapter.
+   *
+   * [order] is the chapter's position in the album as persisted in
+   * [OnlineChapter.order]. Sources whose audio stage only accepts an episode
+   * number (instead of the chapter id) would otherwise have to page through
+   * their own chapter list to find it, because the extras collected during
+   * [chapters] live in an in-memory cache that a cold start loses. Passing it
+   * costs nothing for sources that do not read it.
+   */
   public suspend fun resolveDirectUrl(
     source: String,
     bookId: String,
     chapterId: String,
+    order: Int? = null,
   ): ResolvedStream?
 }

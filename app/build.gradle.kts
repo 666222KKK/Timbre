@@ -31,7 +31,7 @@ android {
 
   defaultConfig {
     applicationId = providers.gradleProperty("voice.applicationId").orNull ?: "app.timbre.audiobook"
-    versionName = providers.gradleProperty("voice.versionName").orNull ?: "1.0.0"
+    versionName = providers.gradleProperty("voice.versionName").orNull ?: "3.7.0.1"
     versionCode = providers.gradleProperty("voice.versionCode").orNull?.toInt() ?: Int.MAX_VALUE
 
     testInstrumentationRunner = "voice.app.VoiceJUnitRunner"
@@ -117,6 +117,10 @@ android {
   }
 
   packaging {
+    // deflate the .so files inside the apk: the download size is what users
+    // see (quickjs alone is 1.6mb raw across two abis), and install-time
+    // extraction is a one-off cost nobody notices
+    jniLibs.useLegacyPackaging = true
     with(resources.pickFirsts) {
       add("META-INF/atomicfu.kotlin_module")
       add("META-INF/core.kotlin_module")
@@ -125,6 +129,16 @@ android {
 
   buildFeatures {
     buildConfig = true
+  }
+}
+
+androidComponents {
+  onVariants(selector().withBuildType("release")) { variant ->
+    // the extension engine (quickjs) ships one .so per abi and they are stored
+    // uncompressed: x86/x86_64 are emulator only and cost 1.7mb in every
+    // release download. Debug keeps them so the emulator can still run
+    // .jdr sources.
+    variant.packaging.jniLibs.excludes.addAll(listOf("lib/x86/**", "lib/x86_64/**"))
   }
 }
 
